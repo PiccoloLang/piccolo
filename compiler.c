@@ -50,6 +50,16 @@ static void compileLiteral(struct piccolo_Engine* engine, struct piccolo_Compile
         advanceCompiler(engine, compiler);
         return;
     }
+    if(compiler->current.type == PICCOLO_TOKEN_FALSE) {
+        piccolo_writeConst(engine, bytecode, BOOL_VAL(false), compiler->current.charIdx);
+        advanceCompiler(engine, compiler);
+        return;
+    }
+    if(compiler->current.type == PICCOLO_TOKEN_TRUE) {
+        piccolo_writeConst(engine, bytecode, BOOL_VAL(true), compiler->current.charIdx);
+        advanceCompiler(engine, compiler);
+        return;
+    }
     if(compiler->current.type == PICCOLO_TOKEN_LEFT_PAREN) {
         advanceCompiler(engine, compiler);
         compileExpr(engine, compiler, bytecode);
