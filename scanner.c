@@ -1,0 +1,82 @@
+
+#include "scanner.h"
+
+#include <string.h>
+#include <stdbool.h>
+
+void piccolo_initScanner(struct piccolo_Scanner* scanner, char* source) {
+    scanner->source = source;
+    scanner->start = source;
+    scanner->current = source;
+}
+
+static void skipWhitespace(struct piccolo_Scanner* scanner) {
+    while(*scanner->current == ' ' || *scanner->current == '\t' || *scanner->current == '\n') {
+        scanner->current++;
+    }
+    scanner->start = scanner->current;
+}
+
+static bool numeric(char c) {
+    return c >= '0' && c <= '9';
+}
+
+static struct piccolo_Token makeToken(struct piccolo_Scanner* scanner, enum piccolo_TokenType type) {
+    struct piccolo_Token token;
+    token.start = scanner->start;
+    token.length = scanner->current - scanner->start;
+    token.type = type;
+    token.charIdx = scanner->start - scanner->source;
+    scanner->start = scanner->current;
+    return token;
+}
+
+struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
+    skipWhitespace(scanner);
+
+    switch(*scanner->current) {
+        case '+': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_PLUS);
+        }
+        case '-': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_MINUS);
+        }
+        case '*': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_STAR);
+        }
+        case '/': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_SLASH);
+        }
+        case '(': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_LEFT_PAREN);
+        }
+        case ')': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_RIGHT_PAREN);
+        }
+        case '\0': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_EOF);
+        }
+    }
+
+    if(numeric(*scanner->start)) {
+        while(numeric(*scanner->current)) {
+            scanner->current++;
+        }
+        if(*scanner->current == '.')
+            scanner->current++;
+        while(numeric(*scanner->current)) {
+            scanner->current++;
+        }
+        return makeToken(scanner, PICCOLO_TOKEN_NUM);
+    }
+
+    scanner->current++;
+    return makeToken(scanner, PICCOLO_TOKEN_ERROR);
+}
