@@ -17,16 +17,19 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
 
     package->source = piccolo_readFile(filepath);
     if(package->source == NULL) {
-        engine->printError("Could not load package %s\n", filepath);
+        piccolo_enginePrintError(engine, "Could not load package %s\n", filepath);
         return package;
     }
 
     if(!piccolo_compilePackage(engine, package)) {
-        engine->printError("Compilation error.\n");
+        piccolo_enginePrintError(engine, "Compilation error.\n");
         return package;
     }
 
-    piccolo_executeBytecode(engine, &package->bytecode);
+    if(!piccolo_executePackage(engine, package)) {
+        piccolo_enginePrintError(engine, "Runtime error.\n");
+        return package;
+    }
     return package;
 }
 

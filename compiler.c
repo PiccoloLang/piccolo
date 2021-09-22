@@ -8,23 +8,24 @@
 #include "package.h"
 #include "engine.h"
 #include "util/strutil.h"
+#include "value.h"
 
 static void compilationError(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* format, ...) {
     va_list args;
+    va_start(args, format);
     engine->printError(format, args);
-    engine->printError("\n");
+    va_end(args);
+    piccolo_enginePrintError(engine, "\n");
     struct piccolo_strutil_LineInfo tokenLine = piccolo_strutil_getLine(compiler->scanner.source, compiler->current.charIdx);
-    engine->printError("[line %d] %.*s\n", tokenLine.line + 1, tokenLine.lineEnd - tokenLine.lineStart, tokenLine.lineStart);
+    piccolo_enginePrintError(engine, "[line %d] %.*s\n", tokenLine.line + 1, tokenLine.lineEnd - tokenLine.lineStart, tokenLine.lineStart);
     int lineNumberDigits = 0;
     int lineNumber = tokenLine.line + 1;
     while(lineNumber > 0) {
         lineNumberDigits++;
         lineNumber /= 10;
     }
-    engine->printError("%* ^", 9 + lineNumberDigits + compiler->current.start - tokenLine.lineStart);
-    for(int i = 0; i < compiler->current.length - 1; i++)
-        engine->printError("^");
-    engine->printError("\n");
+    piccolo_enginePrintError(engine, "%* ^", 9 + lineNumberDigits + compiler->current.start - tokenLine.lineStart);
+    piccolo_enginePrintError(engine, "\n");
     compiler->hadError = true;
 }
 
@@ -40,7 +41,12 @@ static void compileExpr(struct piccolo_Engine* engine, struct piccolo_Compiler* 
 
 static void compileLiteral(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode) {
     if(compiler->current.type == PICCOLO_TOKEN_NUM) {
-        piccolo_writeConst(engine, bytecode, strtod(compiler->current.start, NULL), 1);
+        piccolo_writeConst(engine, bytecode, NUM_VAL(strtod(compiler->current.start, NULL)), compiler->current.charIdx);
+        advanceCompiler(engine, compiler);
+        return;
+    }
+    if(compiler->current.type == PICCOLO_TOKEN_NIL) {
+        piccolo_writeConst(engine, bytecode, NIL_VAL(), compiler->current.charIdx);
         advanceCompiler(engine, compiler);
         return;
     }
@@ -60,10 +66,11 @@ static void compileLiteral(struct piccolo_Engine* engine, struct piccolo_Compile
 
 static void compileUnary(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode) {
     if(compiler->current.type == PICCOLO_TOKEN_MINUS) {
-        piccolo_writeConst(engine, bytecode, 0, 1);
+        int charIdx = compiler->current.charIdx;
+        piccolo_writeConst(engine, bytecode, NUM_VAL(0), charIdx);
         advanceCompiler(engine, compiler);
         compileUnary(engine, compiler, bytecode);
-        piccolo_writeBytecode(engine, bytecode, OP_SUB, 1);
+        piccolo_writeBytecode(engine, bytecode, OP_SUB, charIdx);
         return;
     }
     compileLiteral(engine, compiler, bytecode);
@@ -73,12 +80,13 @@ static void compileMultiplicative(struct piccolo_Engine* engine, struct piccolo_
     compileUnary(engine, compiler, bytecode);
     if(compiler->current.type == PICCOLO_TOKEN_STAR || compiler->current.type == PICCOLO_TOKEN_SLASH) {
         enum piccolo_TokenType operation = compiler->current.type;
+        int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
         compileMultiplicative(engine, compiler, bytecode);
         if(operation == PICCOLO_TOKEN_STAR)
-            piccolo_writeBytecode(engine, bytecode, OP_MUL, 1);
+            piccolo_writeBytecode(engine, bytecode, OP_MUL, charIdx);
         if(operation == PICCOLO_TOKEN_SLASH)
-            piccolo_writeBytecode(engine, bytecode, OP_DIV, 1);
+            piccolo_writeBytecode(engine, bytecode, OP_DIV, charIdx);
     }
 }
 
@@ -86,12 +94,13 @@ static void compileAdditive(struct piccolo_Engine* engine, struct piccolo_Compil
     compileMultiplicative(engine, compiler, bytecode);
     if(compiler->current.type == PICCOLO_TOKEN_PLUS || compiler->current.type == PICCOLO_TOKEN_MINUS) {
         enum piccolo_TokenType operation = compiler->current.type;
+        int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
         compileAdditive(engine, compiler, bytecode);
         if(operation == PICCOLO_TOKEN_PLUS)
-            piccolo_writeBytecode(engine, bytecode, OP_ADD, 1);
+            piccolo_writeBytecode(engine, bytecode, OP_ADD, charIdx);
         if(operation == PICCOLO_TOKEN_MINUS)
-            piccolo_writeBytecode(engine, bytecode, OP_SUB, 1);
+            piccolo_writeBytecode(engine, bytecode, OP_SUB, charIdx);
     }
 }
 

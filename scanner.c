@@ -21,6 +21,26 @@ static bool numeric(char c) {
     return c >= '0' && c <= '9';
 }
 
+static bool alpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
+static bool alphanumeric(char c) {
+    return alpha(c) || numeric(c);
+}
+
+static enum piccolo_TokenType getKeyword(char* start, char* end) {
+    #define TOKEN_TYPE(token, keyword)                                                        \
+        if(end - start < sizeof keyword && memcmp(start, keyword, (sizeof keyword) - 1) == 0) \
+            return PICCOLO_TOKEN_ ## token;
+
+    TOKEN_TYPE(NIL, "nil")
+    TOKEN_TYPE(TRUE, "true")
+    TOKEN_TYPE(FALSE, "false")
+    return PICCOLO_TOKEN_IDENTIFIER;
+    #undef TOKEN_TYPE
+}
+
 static struct piccolo_Token makeToken(struct piccolo_Scanner* scanner, enum piccolo_TokenType type) {
     struct piccolo_Token token;
     token.start = scanner->start;
@@ -81,6 +101,13 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
             scanner->current++;
         }
         return makeToken(scanner, PICCOLO_TOKEN_NUM);
+    }
+
+    if(alpha(*scanner->start)) {
+        while(alphanumeric(*scanner->current)) {
+            scanner->current++;
+        }
+        return makeToken(scanner, getKeyword(scanner->start, scanner->current));
     }
 
     scanner->current++;

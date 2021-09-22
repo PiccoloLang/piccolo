@@ -18,7 +18,7 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         SIMPLE_INSTRUCTION(OP_RETURN)
         case OP_CONST: {
             printf("OP_CONST { ");
-            printValue(bytecode->constants.values[getInstructionParam(bytecode, offset)]);
+            piccolo_printValue(bytecode->constants.values[getInstructionParam(bytecode, offset)]);
             printf(" }\n");
             return offset + 3;
         }
