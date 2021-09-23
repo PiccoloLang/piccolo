@@ -158,6 +158,16 @@ static void compileAdditive(COMPILE_PARAMETERS) {
     }
 }
 
+static void compileVarSet(COMPILE_PARAMETERS) {
+    compileAdditive(COMPILE_ARGUMENTS);
+    if(compiler->current.type == PICCOLO_TOKEN_EQ) {
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        compileVarSet(COMPILE_ARGUMENTS_REQ_VAL);
+        piccolo_writeBytecode(engine, bytecode, OP_SET, charIdx);
+    }
+}
+
 static void compilePrint(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_PRINT) {
         int charIdx = compiler->current.charIdx;
@@ -168,7 +178,7 @@ static void compilePrint(COMPILE_PARAMETERS) {
             piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, charIdx);
         return;
     }
-    compileAdditive(COMPILE_ARGUMENTS);
+    compileVarSet(COMPILE_ARGUMENTS);
 }
 
 static void compileVarDecl(COMPILE_PARAMETERS) {
