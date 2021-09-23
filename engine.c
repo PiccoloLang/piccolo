@@ -70,6 +70,14 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) / AS_NUM(a)));
                 break;
             }
+            case OP_PRINT: {
+                piccolo_printValue(engine->stack.values[engine->stack.count - 1]);
+                printf("\n");
+                break;
+            }
+            case OP_POP_STACK: {
+                piccolo_enginePopStack(engine);
+            }
             default: {
                 break;
             }
@@ -90,12 +98,7 @@ bool piccolo_executePackage(struct piccolo_Engine* engine, struct piccolo_Packag
 bool piccolo_executeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode) {
     engine->bytecode = bytecode;
     engine->ip = bytecode->code.values;
-    bool result = run(engine);
-
-    piccolo_printValue(piccolo_enginePopStack(engine));
-    printf("\n");
-
-    return result;
+    return run(engine);
 }
 
 void piccolo_enginePrintError(struct piccolo_Engine* engine, const char* format, ...) {

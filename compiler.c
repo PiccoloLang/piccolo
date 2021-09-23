@@ -37,9 +37,13 @@ static void advanceCompiler(struct piccolo_Engine* engine, struct piccolo_Compil
     }
 }
 
-static void compileExpr(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode);
+#define COMPILE_PARAMETERS struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode, bool requireValue, bool cycled
+#define COMPILE_ARGUMENTS engine, compiler, bytecode, requireValue, cycled
+#define COMPILE_ARGUMENTS_REQ_VAL engine, compiler, bytecode, true, cycled
 
-static void compileLiteral(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode) {
+static void compileExpr(COMPILE_PARAMETERS);
+
+static void compileLiteral(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_NUM) {
         piccolo_writeConst(engine, bytecode, NUM_VAL(strtod(compiler->current.start, NULL)), compiler->current.charIdx);
         advanceCompiler(engine, compiler);
@@ -62,7 +66,7 @@ static void compileLiteral(struct piccolo_Engine* engine, struct piccolo_Compile
     }
     if(compiler->current.type == PICCOLO_TOKEN_LEFT_PAREN) {
         advanceCompiler(engine, compiler);
-        compileExpr(engine, compiler, bytecode);
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
         if(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN) {
             compilationError(engine, compiler, "Expected ).");
         } else {
@@ -71,28 +75,40 @@ static void compileLiteral(struct piccolo_Engine* engine, struct piccolo_Compile
         return;
     }
 
+    // The reason for this "cycled" nonsense is that in Piccolo,
+    // all statements are expressions. That means that in a
+    // program like this:
+    // print 5 + print 5
+    // the recursive descent parser needs to go all the way back
+    // the top for the second print. However, we need to prevent
+    // infinite recursion. Hence, the cycled argument.
+    if(!cycled) {
+        compileExpr(engine, compiler, bytecode, requireValue, true);
+        return;
+    }
+
     compilationError(engine, compiler, "Expected expression.");
 }
 
-static void compileUnary(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode) {
+static void compileUnary(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_MINUS) {
         int charIdx = compiler->current.charIdx;
         piccolo_writeConst(engine, bytecode, NUM_VAL(0), charIdx);
         advanceCompiler(engine, compiler);
-        compileUnary(engine, compiler, bytecode);
+        compileUnary(COMPILE_ARGUMENTS_REQ_VAL);
         piccolo_writeBytecode(engine, bytecode, OP_SUB, charIdx);
         return;
     }
-    compileLiteral(engine, compiler, bytecode);
+    compileLiteral(COMPILE_ARGUMENTS);
 }
 
-static void compileMultiplicative(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode) {
-    compileUnary(engine, compiler, bytecode);
+static void compileMultiplicative(COMPILE_PARAMETERS) {
+    compileUnary(COMPILE_ARGUMENTS);
     if(compiler->current.type == PICCOLO_TOKEN_STAR || compiler->current.type == PICCOLO_TOKEN_SLASH) {
         enum piccolo_TokenType operation = compiler->current.type;
         int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
-        compileMultiplicative(engine, compiler, bytecode);
+        compileMultiplicative(COMPILE_ARGUMENTS_REQ_VAL);
         if(operation == PICCOLO_TOKEN_STAR)
             piccolo_writeBytecode(engine, bytecode, OP_MUL, charIdx);
         if(operation == PICCOLO_TOKEN_SLASH)
@@ -100,13 +116,13 @@ static void compileMultiplicative(struct piccolo_Engine* engine, struct piccolo_
     }
 }
 
-static void compileAdditive(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode) {
-    compileMultiplicative(engine, compiler, bytecode);
+static void compileAdditive(COMPILE_PARAMETERS) {
+    compileMultiplicative(COMPILE_ARGUMENTS);
     if(compiler->current.type == PICCOLO_TOKEN_PLUS || compiler->current.type == PICCOLO_TOKEN_MINUS) {
         enum piccolo_TokenType operation = compiler->current.type;
         int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
-        compileAdditive(engine, compiler, bytecode);
+        compileAdditive(COMPILE_ARGUMENTS_REQ_VAL);
         if(operation == PICCOLO_TOKEN_PLUS)
             piccolo_writeBytecode(engine, bytecode, OP_ADD, charIdx);
         if(operation == PICCOLO_TOKEN_MINUS)
@@ -114,8 +130,24 @@ static void compileAdditive(struct piccolo_Engine* engine, struct piccolo_Compil
     }
 }
 
-static void compileExpr(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode) {
-    compileAdditive(engine, compiler, bytecode);
+static void compilePrint(COMPILE_PARAMETERS) {
+    bool foundPrint = false;
+    while(compiler->current.type == PICCOLO_TOKEN_PRINT) {
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+        piccolo_writeBytecode(engine, bytecode, OP_PRINT, charIdx);
+        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
+            piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, charIdx);
+        foundPrint = true;
+    }
+    if(foundPrint)
+        return;
+    compileAdditive(COMPILE_ARGUMENTS);
+}
+
+static void compileExpr(COMPILE_PARAMETERS) {
+    compilePrint(COMPILE_ARGUMENTS);
 }
 
 static void initCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, char* source) {
@@ -127,7 +159,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     struct piccolo_Compiler compiler;
     initCompiler(engine, &compiler, package->source);
 
-    compileExpr(engine, &compiler, &package->bytecode);
+    compileExpr(engine, &compiler, &package->bytecode, false, false);
     if(compiler.current.type != PICCOLO_TOKEN_EOF) {
         compilationError(engine, &compiler, "Expected EOF.");
     }
@@ -135,3 +167,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     piccolo_writeBytecode(engine, &package->bytecode, OP_RETURN, 1);
     return !compiler.hadError;
 }
+
+#undef COMPILE_PARAMETERS
+#undef COMPILE_ARGUMENTS
+#undef COMPILE_ARGUMENTS_REQ_VAL

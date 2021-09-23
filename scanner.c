@@ -37,6 +37,8 @@ static enum piccolo_TokenType getKeyword(char* start, char* end) {
     TOKEN_TYPE(NIL, "nil")
     TOKEN_TYPE(TRUE, "true")
     TOKEN_TYPE(FALSE, "false")
+
+    TOKEN_TYPE(PRINT, "print")
     return PICCOLO_TOKEN_IDENTIFIER;
     #undef TOKEN_TYPE
 }

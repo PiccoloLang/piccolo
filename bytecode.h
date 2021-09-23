@@ -11,7 +11,9 @@
 typedef enum {
     OP_RETURN,
     OP_CONST,
-    OP_ADD, OP_SUB, OP_MUL, OP_DIV
+    OP_ADD, OP_SUB, OP_MUL, OP_DIV,
+    OP_PRINT,
+    OP_POP_STACK
 } piccolo_OpCode;
 
 PICCOLO_DYNARRAY_HEADER(uint8_t, Byte)
