@@ -8,6 +8,8 @@
 #include "util/file.h"
 
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
+    piccolo_initValueArray(&package->globals);
+    piccolo_initVariableArray(&package->globalVars);
     piccolo_initBytecode(&package->bytecode);
 }
 
@@ -34,6 +36,8 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
 }
 
 void piccolo_freePackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
+    piccolo_freeValueArray(engine, &package->globals);
+    piccolo_freeVariableArray(engine, &package->globalVars);
     piccolo_freeBytecode(engine, &package->bytecode);
     free(package->source);
 }

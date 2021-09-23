@@ -17,6 +17,9 @@ void piccolo_printValue(piccolo_Value value) {
         printf(AS_BOOL(value) ? "true" : "false");
         return;
     }
+    if(IS_PTR(value)) {
+        printf("<ptr>");
+    }
 }
 
 char* piccolo_getTypeName(piccolo_Value value) {
@@ -28,6 +31,9 @@ char* piccolo_getTypeName(piccolo_Value value) {
     }
     if(IS_BOOL(value)) {
         return "bool";
+    }
+    if(IS_PTR(value)) {
+        return "ptr";
     }
     return "Unknown";
 }

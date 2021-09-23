@@ -38,6 +38,7 @@ static enum piccolo_TokenType getKeyword(char* start, char* end) {
     TOKEN_TYPE(TRUE, "true")
     TOKEN_TYPE(FALSE, "false")
 
+    TOKEN_TYPE(VAR, "var")
     TOKEN_TYPE(PRINT, "print")
     return PICCOLO_TOKEN_IDENTIFIER;
     #undef TOKEN_TYPE
@@ -78,6 +79,10 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
                 return piccolo_nextToken(scanner);
             }
             return makeToken(scanner, PICCOLO_TOKEN_SLASH);
+        }
+        case '=': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_EQ);
         }
         case '(': {
             scanner->current++;

@@ -3,12 +3,15 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "bytecode.h"
 #include "package.h"
 #include "engine.h"
 #include "util/strutil.h"
 #include "value.h"
+
+PICCOLO_DYNARRAY_IMPL(struct piccolo_Variable, Variable)
 
 static void compilationError(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* format, ...) {
     va_list args;
@@ -35,11 +38,19 @@ static void advanceCompiler(struct piccolo_Engine* engine, struct piccolo_Compil
         compilationError(engine, compiler, "Malformed token");
         compiler->current = piccolo_nextToken(&compiler->scanner);
     }
+    compiler->cycled = false;
 }
 
-#define COMPILE_PARAMETERS struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode, bool requireValue, bool cycled
-#define COMPILE_ARGUMENTS engine, compiler, bytecode, requireValue, cycled
-#define COMPILE_ARGUMENTS_REQ_VAL engine, compiler, bytecode, true, cycled
+static int getVarSlot(struct piccolo_VariableArray* variables, struct piccolo_Token token) {
+    for(int i = 0; i < variables->count; i++)
+        if(variables->values[i].nameLen == token.length && memcmp(token.start, variables->values[i].name, token.length) == 0)
+            return i;
+    return -1;
+}
+
+#define COMPILE_PARAMETERS struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode, bool requireValue, bool global
+#define COMPILE_ARGUMENTS engine, compiler, bytecode, requireValue, global
+#define COMPILE_ARGUMENTS_REQ_VAL engine, compiler, bytecode, true, global
 
 static void compileExpr(COMPILE_PARAMETERS);
 
@@ -82,12 +93,29 @@ static void compileLiteral(COMPILE_PARAMETERS) {
     // the recursive descent parser needs to go all the way back
     // the top for the second print. However, we need to prevent
     // infinite recursion. Hence, the cycled argument.
-    if(!cycled) {
-        compileExpr(engine, compiler, bytecode, requireValue, true);
+    if(!compiler->cycled) {
+        compiler->cycled = true;
+        compileExpr(COMPILE_ARGUMENTS);
         return;
     }
 
     compilationError(engine, compiler, "Expected expression.");
+    advanceCompiler(engine, compiler);
+}
+
+static void compileVarLookup(COMPILE_PARAMETERS) {
+    if(compiler->current.type == PICCOLO_TOKEN_IDENTIFIER) {
+        struct piccolo_Token varName = compiler->current;
+        int globalSlot = getVarSlot(compiler->globals, varName);
+        if(globalSlot == -1) {
+            compilationError(engine, compiler, "Variable %.*s is not defined.", varName.length, varName.start);
+        } else {
+            piccolo_writeParameteredBytecode(engine, bytecode, OP_GET_GLOBAL, globalSlot, varName.charIdx);
+        }
+        advanceCompiler(engine, compiler);
+        return;
+    }
+    compileLiteral(COMPILE_ARGUMENTS);
 }
 
 static void compileUnary(COMPILE_PARAMETERS) {
@@ -99,7 +127,7 @@ static void compileUnary(COMPILE_PARAMETERS) {
         piccolo_writeBytecode(engine, bytecode, OP_SUB, charIdx);
         return;
     }
-    compileLiteral(COMPILE_ARGUMENTS);
+    compileVarLookup(COMPILE_ARGUMENTS);
 }
 
 static void compileMultiplicative(COMPILE_PARAMETERS) {
@@ -131,23 +159,67 @@ static void compileAdditive(COMPILE_PARAMETERS) {
 }
 
 static void compilePrint(COMPILE_PARAMETERS) {
-    bool foundPrint = false;
-    while(compiler->current.type == PICCOLO_TOKEN_PRINT) {
+    if(compiler->current.type == PICCOLO_TOKEN_PRINT) {
         int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
         compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
         piccolo_writeBytecode(engine, bytecode, OP_PRINT, charIdx);
         if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
             piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, charIdx);
-        foundPrint = true;
-    }
-    if(foundPrint)
         return;
+    }
     compileAdditive(COMPILE_ARGUMENTS);
 }
 
-static void compileExpr(COMPILE_PARAMETERS) {
+static void compileVarDecl(COMPILE_PARAMETERS) {
+    if(compiler->current.type == PICCOLO_TOKEN_VAR) {
+        advanceCompiler(engine, compiler);
+        struct piccolo_Token varName = compiler->current;
+
+        if(compiler->current.type != PICCOLO_TOKEN_IDENTIFIER) {
+            compilationError(engine, compiler, "Expected variable name.");
+        } else {
+            if(global) {
+                int slot = getVarSlot(compiler->globals, varName);
+                if(slot != -1) {
+                    compilationError(engine, compiler, "Variable %.*s already defined.", varName.length, varName.start);
+                } else {
+                    slot = compiler->globals->count;
+                    struct piccolo_Variable variable;
+                    variable.slot = slot;
+                    variable.name = varName.start;
+                    variable.nameLen = varName.length;
+                    piccolo_writeVariableArray(engine, compiler->globals, variable);
+
+                    piccolo_writeParameteredBytecode(engine, bytecode, OP_GET_GLOBAL, slot, varName.charIdx);
+                }
+            }
+        }
+
+        advanceCompiler(engine, compiler);
+        int eqCharIdx = compiler->current.charIdx;
+        if(compiler->current.type != PICCOLO_TOKEN_EQ) {
+            compilationError(engine, compiler, "Expected =.");
+        }
+        advanceCompiler(engine, compiler);
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+        piccolo_writeBytecode(engine, bytecode, OP_SET, eqCharIdx);
+
+        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
+            piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, eqCharIdx);
+        return;
+    }
     compilePrint(COMPILE_ARGUMENTS);
+}
+
+static void compileExpr(COMPILE_PARAMETERS) {
+    if(requireValue) {
+        compileVarDecl(COMPILE_ARGUMENTS_REQ_VAL);
+    } else {
+        while(compiler->current.type != PICCOLO_TOKEN_EOF && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE) {
+            compileVarDecl(COMPILE_ARGUMENTS);
+        }
+    }
 }
 
 static void initCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, char* source) {
@@ -158,8 +230,9 @@ static void initCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler*
 bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     struct piccolo_Compiler compiler;
     initCompiler(engine, &compiler, package->source);
+    compiler.globals = &package->globalVars;
 
-    compileExpr(engine, &compiler, &package->bytecode, false, false);
+    compileExpr(engine, &compiler, &package->bytecode, false, true);
     if(compiler.current.type != PICCOLO_TOKEN_EOF) {
         compilationError(engine, &compiler, "Expected EOF.");
     }

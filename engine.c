@@ -17,6 +17,11 @@ void piccolo_freeEngine(struct piccolo_Engine* engine) {
     piccolo_freePackage(engine, &engine->package);
 }
 
+static void evaporatePointer(piccolo_Value* value) {
+    while(IS_PTR((*value)))
+        *value = *AS_PTR((*value));
+}
+
 static bool run(struct piccolo_Engine* engine) {
 #define READ_BYTE() (*(engine->ip++))
 #define READ_PARAM() ((READ_BYTE() << 8) + READ_BYTE())
@@ -33,6 +38,8 @@ static bool run(struct piccolo_Engine* engine) {
             case OP_ADD: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
+                evaporatePointer(&a);
+                evaporatePointer(&b);
                 if(!IS_NUM(a) || !IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot add %s and %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                     break;
@@ -43,6 +50,8 @@ static bool run(struct piccolo_Engine* engine) {
             case OP_SUB: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
+                evaporatePointer(&a);
+                evaporatePointer(&b);
                 if(!IS_NUM(a) || !IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot subtract %s from %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
                     break;
@@ -53,6 +62,8 @@ static bool run(struct piccolo_Engine* engine) {
             case OP_MUL: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
+                evaporatePointer(&a);
+                evaporatePointer(&b);
                 if(!IS_NUM(a) || !IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot multiply %s by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                     break;
@@ -63,6 +74,8 @@ static bool run(struct piccolo_Engine* engine) {
             case OP_DIV: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
+                evaporatePointer(&a);
+                evaporatePointer(&b);
                 if(!IS_NUM(a) || !IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot divide %s by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                     break;
@@ -71,14 +84,36 @@ static bool run(struct piccolo_Engine* engine) {
                 break;
             }
             case OP_PRINT: {
+                evaporatePointer(engine->stack.values + engine->stack.count - 1);
                 piccolo_printValue(engine->stack.values[engine->stack.count - 1]);
                 printf("\n");
                 break;
             }
             case OP_POP_STACK: {
                 piccolo_enginePopStack(engine);
+                break;
+            }
+            case OP_GET_GLOBAL: {
+                int slot = READ_PARAM();
+                while(engine->currentPackage->globals.count <= slot)
+                    piccolo_writeValueArray(engine, &engine->currentPackage->globals, NIL_VAL());
+                piccolo_enginePushStack(engine, PTR_VAL(engine->currentPackage->globals.values + slot));
+                break;
+            }
+            case OP_SET: {
+                piccolo_Value value = piccolo_enginePopStack(engine);
+                evaporatePointer(&value);
+                piccolo_Value ptr = piccolo_enginePopStack(engine);
+                if(!IS_PTR(ptr)) {
+                    piccolo_runtimeError(engine, "Cannot assign to %s", piccolo_getTypeName(ptr));
+                    break;
+                }
+                *AS_PTR(ptr) = value;
+                piccolo_enginePushStack(engine, value);
+                break;
             }
             default: {
+                piccolo_runtimeError(engine, "Unknown opcode.");
                 break;
             }
         }

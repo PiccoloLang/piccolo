@@ -3,10 +3,13 @@
 #define PICCOLO_PACKAGE_H
 
 #include "bytecode.h"
+#include "compiler.h"
 
 struct piccolo_Package {
     struct piccolo_Bytecode bytecode;
     char* source;
+    struct piccolo_ValueArray globals;
+    struct piccolo_VariableArray globalVars;
 };
 
 struct piccolo_Engine;

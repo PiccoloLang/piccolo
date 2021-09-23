@@ -13,7 +13,10 @@ typedef enum {
     OP_CONST,
     OP_ADD, OP_SUB, OP_MUL, OP_DIV,
     OP_PRINT,
-    OP_POP_STACK
+    OP_POP_STACK,
+
+    OP_GET_GLOBAL,
+    OP_SET
 } piccolo_OpCode;
 
 PICCOLO_DYNARRAY_HEADER(uint8_t, Byte)
@@ -29,6 +32,7 @@ void piccolo_initBytecode(struct piccolo_Bytecode* bytecode);
 void piccolo_freeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode);
 
 void piccolo_writeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, uint8_t byte, int charIdx);
+void piccolo_writeParameteredBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, uint8_t byte, uint16_t param, int charIdx);
 void piccolo_writeConst(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, piccolo_Value value, int charIdx);
 
 #endif

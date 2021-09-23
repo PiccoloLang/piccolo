@@ -21,11 +21,14 @@ void piccolo_writeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecod
     piccolo_writeIntArray(engine, &bytecode->charIdxs, charIdx);
 }
 
+void piccolo_writeParameteredBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, uint8_t byte, uint16_t param, int charIdx) {
+    piccolo_writeBytecode(engine, bytecode, byte, charIdx);
+    piccolo_writeBytecode(engine, bytecode, (param & 0xFF00) >> 8, charIdx);
+    piccolo_writeBytecode(engine, bytecode, (param & 0x00FF) >> 0, charIdx);
+}
+
 void piccolo_writeConst(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, piccolo_Value constant, int charIdx) {
     int constIdx = bytecode->constants.count;
-
     piccolo_writeValueArray(engine, &bytecode->constants, constant);
-    piccolo_writeBytecode(engine, bytecode, OP_CONST, charIdx);
-    piccolo_writeBytecode(engine, bytecode, (constIdx & 0xFF00) >> 8, charIdx);
-    piccolo_writeBytecode(engine, bytecode, (constIdx & 0x00FF) >> 0, charIdx);
+    piccolo_writeParameteredBytecode(engine, bytecode, OP_CONST, constIdx, charIdx);
 }

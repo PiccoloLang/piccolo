@@ -12,6 +12,11 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         printf(#opcode "\n");            \
         return offset + 1;               \
     }
+#define PARAM_INSTRUCTION(opcode)        \
+    case opcode: {                       \
+        printf(#opcode " %d\n", getInstructionParam(bytecode, offset)); \
+        return offset + 3;               \
+    }
 
     printf("%4d | ", offset);
     switch(bytecode->code.values[offset]) {
@@ -28,6 +33,9 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         SIMPLE_INSTRUCTION(OP_DIV)
         SIMPLE_INSTRUCTION(OP_PRINT)
         SIMPLE_INSTRUCTION(OP_POP_STACK)
+
+        PARAM_INSTRUCTION(OP_GET_GLOBAL)
+        SIMPLE_INSTRUCTION(OP_SET)
     }
     printf("Unknown Opcode.\n");
     return offset + 1;
