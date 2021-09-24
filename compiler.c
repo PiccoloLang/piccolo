@@ -51,6 +51,7 @@ static int getVarSlot(struct piccolo_VariableArray* variables, struct piccolo_To
 #define COMPILE_PARAMETERS struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode, bool requireValue, bool global
 #define COMPILE_ARGUMENTS engine, compiler, bytecode, requireValue, global
 #define COMPILE_ARGUMENTS_REQ_VAL engine, compiler, bytecode, true, global
+#define COMPILE_ARGUMENTS_NO_VAL engine, compiler, bytecode, false, global
 
 static void compileExpr(COMPILE_PARAMETERS);
 
@@ -108,7 +109,12 @@ static void compileVarLookup(COMPILE_PARAMETERS) {
         struct piccolo_Token varName = compiler->current;
         int globalSlot = getVarSlot(compiler->globals, varName);
         if(globalSlot == -1) {
-            compilationError(engine, compiler, "Variable %.*s is not defined.", varName.length, varName.start);
+            int localSlot = getVarSlot(&compiler->locals, varName);
+            if(localSlot == -1) {
+                compilationError(engine, compiler, "Variable %.*s is not defined.", varName.length, varName.start);
+            } else {
+                piccolo_writeParameteredBytecode(engine, bytecode, OP_GET_STACK, localSlot, varName.charIdx);
+            }
         } else {
             piccolo_writeParameteredBytecode(engine, bytecode, OP_GET_GLOBAL, globalSlot, varName.charIdx);
         }
@@ -165,6 +171,11 @@ static void compileVarSet(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
         compileVarSet(COMPILE_ARGUMENTS_REQ_VAL);
         piccolo_writeBytecode(engine, bytecode, OP_SET, charIdx);
+        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
+            piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, charIdx);
+    } else {
+        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
+            piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, 0);
     }
 }
 
@@ -198,6 +209,14 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
                     slot = compiler->globals->count;
                     piccolo_writeParameteredBytecode(engine, bytecode, OP_GET_GLOBAL, slot, varName.charIdx);
                 }
+            } else {
+                slot = getVarSlot(&compiler->locals, varName);
+                if(slot != -1) {
+                    compilationError(engine, compiler, "Variable %.*s already defined.", varName.length, varName.start);
+                } else {
+                    slot = compiler->locals.count;
+                    piccolo_writeParameteredBytecode(engine, bytecode, OP_GET_STACK, slot, varName.charIdx);
+                }
             }
         }
 
@@ -216,6 +235,12 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
             variable.name = varName.start;
             variable.nameLen = varName.length;
             piccolo_writeVariableArray(engine, compiler->globals, variable);
+        } else {
+            struct piccolo_Variable variable;
+            variable.slot = slot;
+            variable.name = varName.start;
+            variable.nameLen = varName.length;
+            piccolo_writeVariableArray(engine, &compiler->locals, variable);
         }
 
         if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
@@ -225,18 +250,40 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
     compilePrint(COMPILE_ARGUMENTS);
 }
 
+static void compileBlock(COMPILE_PARAMETERS) {
+    if(compiler->current.type == PICCOLO_TOKEN_LEFT_BRACE) {
+        int localsBefore = compiler->locals.count;
+        advanceCompiler(engine, compiler);
+        while(compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE) {
+            if(compiler->current.type == PICCOLO_TOKEN_EOF) {
+                compilationError(engine, compiler, "Expected }.");
+                break;
+            }
+            compileVarDecl(engine, compiler, bytecode, false, false);
+        }
+        advanceCompiler(engine, compiler);
+        int charIdx = compiler->current.charIdx;
+        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
+            piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, charIdx);
+        compiler->locals.count = localsBefore;
+        return;
+    }
+    compileVarDecl(COMPILE_ARGUMENTS);
+}
+
 static void compileExpr(COMPILE_PARAMETERS) {
     if(requireValue) {
-        compileVarDecl(COMPILE_ARGUMENTS_REQ_VAL);
+        compileBlock(COMPILE_ARGUMENTS_REQ_VAL);
     } else {
         while(compiler->current.type != PICCOLO_TOKEN_EOF && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE) {
-            compileVarDecl(COMPILE_ARGUMENTS);
+            compileBlock(COMPILE_ARGUMENTS);
         }
     }
 }
 
 static void initCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, char* source) {
     piccolo_initScanner(&compiler->scanner, source);
+    piccolo_initVariableArray(&compiler->locals);
     advanceCompiler(engine, compiler);
 }
 
@@ -257,3 +304,4 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
 #undef COMPILE_PARAMETERS
 #undef COMPILE_ARGUMENTS
 #undef COMPILE_ARGUMENTS_REQ_VAL
+#undef COMPILE_ARGUMENTS_NO_VAL

@@ -35,6 +35,7 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         SIMPLE_INSTRUCTION(OP_POP_STACK)
 
         PARAM_INSTRUCTION(OP_GET_GLOBAL)
+        PARAM_INSTRUCTION(OP_GET_STACK)
         SIMPLE_INSTRUCTION(OP_SET)
     }
     printf("Unknown Opcode.\n");

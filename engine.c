@@ -8,9 +8,8 @@
 #include "util/strutil.h"
 
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list)) {
-    piccolo_initValueArray(&engine->stack);
-
     engine->printError = printError;
+    engine->stackTop = engine->stack;
 }
 
 void piccolo_freeEngine(struct piccolo_Engine* engine) {
@@ -84,13 +83,19 @@ static bool run(struct piccolo_Engine* engine) {
                 break;
             }
             case OP_PRINT: {
-                evaporatePointer(engine->stack.values + engine->stack.count - 1);
-                piccolo_printValue(engine->stack.values[engine->stack.count - 1]);
+                piccolo_Value val = piccolo_enginePeekStack(engine);
+                evaporatePointer(&val);
+                piccolo_printValue(val);
                 printf("\n");
                 break;
             }
             case OP_POP_STACK: {
                 piccolo_enginePopStack(engine);
+                break;
+            }
+            case OP_GET_STACK: {
+                int slot = READ_PARAM();
+                piccolo_enginePushStack(engine, PTR_VAL(engine->varStack + slot));
                 break;
             }
             case OP_GET_GLOBAL: {
@@ -144,11 +149,18 @@ void piccolo_enginePrintError(struct piccolo_Engine* engine, const char* format,
 }
 
 void piccolo_enginePushStack(struct piccolo_Engine* engine, piccolo_Value value) {
-    piccolo_writeValueArray(engine, &engine->stack, value);
+    *engine->stackTop = value;
+    engine->stackTop++;
 }
 
 piccolo_Value piccolo_enginePopStack(struct piccolo_Engine* engine) {
-    return piccolo_popValueArray(&engine->stack);
+    piccolo_Value value = piccolo_enginePeekStack(engine);
+    engine->stackTop--;
+    return value;
+}
+
+piccolo_Value piccolo_enginePeekStack(struct piccolo_Engine* engine) {
+    return *(engine->stackTop - 1);
 }
 
 void piccolo_runtimeError(struct piccolo_Engine* engine, const char* format, ...) {

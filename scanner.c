@@ -92,6 +92,14 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
             scanner->current++;
             return makeToken(scanner, PICCOLO_TOKEN_RIGHT_PAREN);
         }
+        case '{': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_LEFT_BRACE);
+        }
+        case '}': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_RIGHT_BRACE);
+        }
         case '\0': {
             scanner->current++;
             return makeToken(scanner, PICCOLO_TOKEN_EOF);

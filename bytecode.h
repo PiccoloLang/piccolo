@@ -16,6 +16,7 @@ typedef enum {
     OP_POP_STACK,
 
     OP_GET_GLOBAL,
+    OP_GET_STACK,
     OP_SET
 } piccolo_OpCode;
 

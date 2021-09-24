@@ -22,6 +22,7 @@ struct piccolo_Compiler {
     struct piccolo_Scanner scanner;
     struct piccolo_Token current;
     struct piccolo_VariableArray* globals;
+    struct piccolo_VariableArray locals;
     bool hadError;
     bool cycled;
 };

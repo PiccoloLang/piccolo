@@ -6,6 +6,7 @@
 #include "engine.h"
 #include "compiler.h"
 #include "util/file.h"
+#include "debug/disassembler.h"
 
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     piccolo_initValueArray(&package->globals);
