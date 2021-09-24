@@ -12,7 +12,7 @@ struct piccolo_Package;
 
 struct piccolo_Variable {
     int slot;
-    const char* name;
+    char* name;
     size_t nameLen;
 };
 
