@@ -5,5 +5,6 @@
 #include "engine.h"
 #include "package.h"
 #include "value.h"
+#include "embedding.h"
 
 #endif
