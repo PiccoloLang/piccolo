@@ -132,11 +132,11 @@ static void compileUnary(COMPILE_PARAMETERS) {
 
 static void compileMultiplicative(COMPILE_PARAMETERS) {
     compileUnary(COMPILE_ARGUMENTS);
-    if(compiler->current.type == PICCOLO_TOKEN_STAR || compiler->current.type == PICCOLO_TOKEN_SLASH) {
+    while(compiler->current.type == PICCOLO_TOKEN_STAR || compiler->current.type == PICCOLO_TOKEN_SLASH) {
         enum piccolo_TokenType operation = compiler->current.type;
         int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
-        compileMultiplicative(COMPILE_ARGUMENTS_REQ_VAL);
+        compileUnary(COMPILE_ARGUMENTS_REQ_VAL);
         if(operation == PICCOLO_TOKEN_STAR)
             piccolo_writeBytecode(engine, bytecode, OP_MUL, charIdx);
         if(operation == PICCOLO_TOKEN_SLASH)
@@ -146,11 +146,11 @@ static void compileMultiplicative(COMPILE_PARAMETERS) {
 
 static void compileAdditive(COMPILE_PARAMETERS) {
     compileMultiplicative(COMPILE_ARGUMENTS);
-    if(compiler->current.type == PICCOLO_TOKEN_PLUS || compiler->current.type == PICCOLO_TOKEN_MINUS) {
+    while(compiler->current.type == PICCOLO_TOKEN_PLUS || compiler->current.type == PICCOLO_TOKEN_MINUS) {
         enum piccolo_TokenType operation = compiler->current.type;
         int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
-        compileAdditive(COMPILE_ARGUMENTS_REQ_VAL);
+        compileMultiplicative(COMPILE_ARGUMENTS_REQ_VAL);
         if(operation == PICCOLO_TOKEN_PLUS)
             piccolo_writeBytecode(engine, bytecode, OP_ADD, charIdx);
         if(operation == PICCOLO_TOKEN_MINUS)
