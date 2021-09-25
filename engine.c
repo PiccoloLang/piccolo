@@ -33,6 +33,8 @@ static bool run(struct piccolo_Engine* engine) {
                 if(engine->currFrame == engine->frames)
                     return true;
                 engine->currFrame--;
+                engine->currFrame->prevIp = engine->currFrame->ip;
+                engine->bytecode = engine->currFrame->bytecode;
                 break;
             case OP_CONST: {
                 piccolo_enginePushStack(engine, engine->bytecode->constants.values[READ_PARAM()]);
@@ -136,6 +138,12 @@ static bool run(struct piccolo_Engine* engine) {
                 }
                 struct piccolo_ObjFunction* funcObj = (struct piccolo_ObjFunction*)AS_OBJ(func);
                 engine->currFrame->ip = engine->currFrame->prevIp = funcObj->bytecode.code.values;
+                engine->currFrame->bytecode = &funcObj->bytecode;
+                engine->bytecode = &funcObj->bytecode;
+                if(funcObj->arity != argCount) {
+                    piccolo_runtimeError(engine, "Wrong argument count.");
+                    break;
+                }
                 break;
             }
             default: {
@@ -160,6 +168,7 @@ bool piccolo_executeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytec
     engine->bytecode = bytecode;
     engine->currFrame = engine->frames;
     engine->currFrame->ip = bytecode->code.values;
+    engine->currFrame->bytecode = bytecode;
     return run(engine);
 }
 

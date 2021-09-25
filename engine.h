@@ -11,6 +11,7 @@ struct piccolo_CallFrame {
     piccolo_Value varStack[256];
     uint8_t* prevIp;
     uint8_t* ip;
+    struct piccolo_Bytecode* bytecode;
 };
 
 struct piccolo_Engine {

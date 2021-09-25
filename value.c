@@ -2,12 +2,13 @@
 #include <stdio.h>
 #include "value.h"
 #include "object.h"
+#include "debug/disassembler.h"
 
 PICCOLO_DYNARRAY_IMPL(piccolo_Value, Value)
 
 static void printObject(struct piccolo_Obj* obj) {
     if(obj->type == PICCOLO_OBJ_FUNC) {
-        printf("<fn>");
+        printf("<fn %d>", ((struct piccolo_ObjFunction*)obj)->arity);
     }
 }
 

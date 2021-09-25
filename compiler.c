@@ -185,6 +185,7 @@ static void compileVarLookup(COMPILE_PARAMETERS) {
 static void compileFnCall(COMPILE_PARAMETERS) {
     compileVarLookup(COMPILE_ARGUMENTS);
     while(compiler->current.type == PICCOLO_TOKEN_LEFT_PAREN) {
+        int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
         int args = 0;
         while(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN) {
@@ -200,7 +201,6 @@ static void compileFnCall(COMPILE_PARAMETERS) {
 
             args++;
         }
-        int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
         piccolo_writeParameteredBytecode(engine, bytecode, OP_CALL, args, charIdx);
     }
@@ -247,9 +247,10 @@ static void compileAdditive(COMPILE_PARAMETERS) {
 }
 
 static void compileVarSet(COMPILE_PARAMETERS) {
+    int charIdx = compiler->current.charIdx;
     compileAdditive(COMPILE_ARGUMENTS);
     if(compiler->current.type == PICCOLO_TOKEN_EQ) {
-        int charIdx = compiler->current.charIdx;
+        charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
         compileVarSet(COMPILE_ARGUMENTS_REQ_VAL);
         piccolo_writeBytecode(engine, bytecode, OP_SET, charIdx);
@@ -257,7 +258,7 @@ static void compileVarSet(COMPILE_PARAMETERS) {
             piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, charIdx);
     } else {
         if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
-            piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, 0);
+            piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, charIdx);
     }
 }
 
