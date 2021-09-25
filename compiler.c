@@ -4,14 +4,20 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "bytecode.h"
 #include "package.h"
 #include "engine.h"
 #include "util/strutil.h"
 #include "value.h"
+#include "object.h"
 
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Variable, Variable)
+
+static void freeCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler) {
+    piccolo_freeVariableArray(engine, &compiler->locals);
+}
 
 static void compilationError(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* format, ...) {
     va_list args;
@@ -19,7 +25,7 @@ static void compilationError(struct piccolo_Engine* engine, struct piccolo_Compi
     engine->printError(format, args);
     va_end(args);
     piccolo_enginePrintError(engine, "\n");
-    struct piccolo_strutil_LineInfo tokenLine = piccolo_strutil_getLine(compiler->scanner.source, compiler->current.charIdx);
+    struct piccolo_strutil_LineInfo tokenLine = piccolo_strutil_getLine(compiler->scanner->source, compiler->current.charIdx);
     piccolo_enginePrintError(engine, "[line %d] %.*s\n", tokenLine.line + 1, tokenLine.lineEnd - tokenLine.lineStart, tokenLine.lineStart);
     int lineNumberDigits = 0;
     int lineNumber = tokenLine.line + 1;
@@ -33,10 +39,10 @@ static void compilationError(struct piccolo_Engine* engine, struct piccolo_Compi
 }
 
 static void advanceCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler) {
-    compiler->current = piccolo_nextToken(&compiler->scanner);
+    compiler->current = piccolo_nextToken(compiler->scanner);
     while(compiler->current.type == PICCOLO_TOKEN_ERROR) {
         compilationError(engine, compiler, "Malformed token");
-        compiler->current = piccolo_nextToken(&compiler->scanner);
+        compiler->current = piccolo_nextToken(compiler->scanner);
     }
     compiler->cycled = false;
 }
@@ -104,6 +110,58 @@ static void compileLiteral(COMPILE_PARAMETERS) {
     advanceCompiler(engine, compiler);
 }
 
+static void compileFnLiteral(COMPILE_PARAMETERS) {
+    if(compiler->current.type == PICCOLO_TOKEN_FN) {
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+
+        struct piccolo_Compiler functionCompiler;
+        functionCompiler.scanner = compiler->scanner;
+        functionCompiler.globals = compiler->globals;
+        piccolo_initVariableArray(&functionCompiler.locals);
+
+        struct piccolo_ObjFunction* function = piccolo_newFunction(engine);
+
+        while(compiler->current.type != PICCOLO_TOKEN_ARROW) {
+            if(compiler->current.type == PICCOLO_TOKEN_EOF) {
+                compilationError(engine, compiler, "Expected ->.");
+                return;
+            }
+            struct piccolo_Token parameterName = compiler->current;
+            if(compiler->current.type != PICCOLO_TOKEN_IDENTIFIER) {
+                compilationError(engine, compiler, "Expected parameter name.");
+            } else {
+                struct piccolo_Variable parameter;
+                parameter.name = parameterName.start;
+                parameter.nameLen = parameterName.length;
+                parameter.slot = functionCompiler.locals.count;
+                piccolo_writeVariableArray(engine, &functionCompiler.locals, parameter);
+                function->arity++;
+            }
+            advanceCompiler(engine, compiler);
+        }
+
+        advanceCompiler(engine, compiler);
+        functionCompiler.current = compiler->current;
+        functionCompiler.cycled = false;
+        functionCompiler.hadError = false;
+
+        compileExpr(engine, &functionCompiler, &function->bytecode, true, false);
+
+        freeCompiler(engine, &functionCompiler);
+
+        if(functionCompiler.hadError)
+            compiler->hadError = true;
+
+        compiler->current = functionCompiler.current;
+
+        piccolo_writeConst(engine, bytecode, OBJ_VAL(function), charIdx);
+
+        return;
+    }
+    compileLiteral(COMPILE_ARGUMENTS);
+}
+
 static void compileVarLookup(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_IDENTIFIER) {
         struct piccolo_Token varName = compiler->current;
@@ -121,7 +179,31 @@ static void compileVarLookup(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
         return;
     }
-    compileLiteral(COMPILE_ARGUMENTS);
+    compileFnLiteral(COMPILE_ARGUMENTS);
+}
+
+static void compileFnCall(COMPILE_PARAMETERS) {
+    compileVarLookup(COMPILE_ARGUMENTS);
+    while(compiler->current.type == PICCOLO_TOKEN_LEFT_PAREN) {
+        advanceCompiler(engine, compiler);
+        int args = 0;
+        while(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN) {
+            if(compiler->current.type == PICCOLO_TOKEN_EOF) {
+                compilationError(engine, compiler, "Expected ).");
+                break;
+            }
+            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+            if(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN && compiler->current.type != PICCOLO_TOKEN_COMMA)
+                compilationError(engine, compiler, "Expected ,.");
+            if(compiler->current.type == PICCOLO_TOKEN_COMMA)
+                advanceCompiler(engine, compiler);
+
+            args++;
+        }
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        piccolo_writeParameteredBytecode(engine, bytecode, OP_CALL, args, charIdx);
+    }
 }
 
 static void compileUnary(COMPILE_PARAMETERS) {
@@ -133,7 +215,7 @@ static void compileUnary(COMPILE_PARAMETERS) {
         piccolo_writeBytecode(engine, bytecode, OP_SUB, charIdx);
         return;
     }
-    compileVarLookup(COMPILE_ARGUMENTS);
+    compileFnCall(COMPILE_ARGUMENTS);
 }
 
 static void compileMultiplicative(COMPILE_PARAMETERS) {
@@ -282,13 +364,15 @@ static void compileExpr(COMPILE_PARAMETERS) {
 }
 
 static void initCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, char* source) {
-    piccolo_initScanner(&compiler->scanner, source);
+    piccolo_initScanner(compiler->scanner, source);
     piccolo_initVariableArray(&compiler->locals);
     advanceCompiler(engine, compiler);
 }
 
 bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     struct piccolo_Compiler compiler;
+    struct piccolo_Scanner scanner;
+    compiler.scanner = &scanner;
     initCompiler(engine, &compiler, package->source);
     compiler.globals = &package->globalVars;
 
@@ -296,6 +380,8 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     if(compiler.current.type != PICCOLO_TOKEN_EOF) {
         compilationError(engine, &compiler, "Expected EOF.");
     }
+
+    freeCompiler(engine, &compiler);
 
     piccolo_writeBytecode(engine, &package->bytecode, OP_RETURN, 1);
     return !compiler.hadError;

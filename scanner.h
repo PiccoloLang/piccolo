@@ -8,9 +8,13 @@
 enum piccolo_TokenType {
     // Single chars
     PICCOLO_TOKEN_PLUS, PICCOLO_TOKEN_MINUS, PICCOLO_TOKEN_STAR, PICCOLO_TOKEN_SLASH,
+    PICCOLO_TOKEN_COMMA,
     PICCOLO_TOKEN_EQ,
     PICCOLO_TOKEN_LEFT_PAREN, PICCOLO_TOKEN_RIGHT_PAREN,
     PICCOLO_TOKEN_LEFT_BRACE, PICCOLO_TOKEN_RIGHT_BRACE,
+
+    // 2 chars
+    PICCOLO_TOKEN_ARROW,
 
     // Literals
     PICCOLO_TOKEN_NUM, PICCOLO_TOKEN_NIL, PICCOLO_TOKEN_TRUE, PICCOLO_TOKEN_FALSE,
@@ -18,6 +22,7 @@ enum piccolo_TokenType {
     // Keywords
     PICCOLO_TOKEN_VAR,
     PICCOLO_TOKEN_PRINT,
+    PICCOLO_TOKEN_FN,
 
     // Misc
     PICCOLO_TOKEN_IDENTIFIER,
@@ -32,7 +37,7 @@ struct piccolo_Scanner {
 };
 
 struct piccolo_Token {
-    const char* start;
+    char* start;
     uint32_t charIdx;
     size_t length;
     enum piccolo_TokenType type;

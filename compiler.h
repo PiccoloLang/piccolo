@@ -19,7 +19,7 @@ struct piccolo_Variable {
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Variable, Variable)
 
 struct piccolo_Compiler {
-    struct piccolo_Scanner scanner;
+    struct piccolo_Scanner* scanner;
     struct piccolo_Token current;
     struct piccolo_VariableArray* globals;
     struct piccolo_VariableArray locals;

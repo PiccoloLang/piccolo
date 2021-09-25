@@ -1,8 +1,15 @@
 
 #include <stdio.h>
 #include "value.h"
+#include "object.h"
 
 PICCOLO_DYNARRAY_IMPL(piccolo_Value, Value)
+
+static void printObject(struct piccolo_Obj* obj) {
+    if(obj->type == PICCOLO_OBJ_FUNC) {
+        printf("<fn>");
+    }
+}
 
 void piccolo_printValue(piccolo_Value value) {
     if(IS_NIL(value)) {
@@ -19,6 +26,9 @@ void piccolo_printValue(piccolo_Value value) {
     }
     if(IS_PTR(value)) {
         printf("<ptr>");
+    }
+    if(IS_OBJ(value)) {
+        printObject(AS_OBJ(value));
     }
 }
 

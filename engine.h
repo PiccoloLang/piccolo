@@ -7,16 +7,21 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+struct piccolo_CallFrame {
+    piccolo_Value varStack[256];
+    uint8_t* prevIp;
+    uint8_t* ip;
+};
+
 struct piccolo_Engine {
     struct piccolo_Package package;
 
     struct piccolo_Package* currentPackage;
     struct piccolo_Bytecode* bytecode;
-    uint8_t* prevIp;
-    uint8_t* ip;
     piccolo_Value stack[256];
-    piccolo_Value varStack[512];
     piccolo_Value* stackTop;
+    struct piccolo_CallFrame frames[256];
+    struct piccolo_CallFrame* currFrame;
     bool hadError;
 
     void (*printError)(const char* format, va_list);

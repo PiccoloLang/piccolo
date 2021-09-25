@@ -17,7 +17,9 @@ typedef enum {
 
     OP_GET_GLOBAL,
     OP_GET_STACK,
-    OP_SET
+    OP_SET,
+
+    OP_CALL
 } piccolo_OpCode;
 
 PICCOLO_DYNARRAY_HEADER(uint8_t, Byte)

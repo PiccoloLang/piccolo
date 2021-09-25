@@ -40,6 +40,7 @@ static enum piccolo_TokenType getKeyword(char* start, char* end) {
 
     TOKEN_TYPE(VAR, "var")
     TOKEN_TYPE(PRINT, "print")
+    TOKEN_TYPE(FN, "fn")
     return PICCOLO_TOKEN_IDENTIFIER;
     #undef TOKEN_TYPE
 }
@@ -64,11 +65,19 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
         }
         case '-': {
             scanner->current++;
+            if(*scanner->current == '>') {
+                scanner->current++;
+                return makeToken(scanner, PICCOLO_TOKEN_ARROW);
+            }
             return makeToken(scanner, PICCOLO_TOKEN_MINUS);
         }
         case '*': {
             scanner->current++;
             return makeToken(scanner, PICCOLO_TOKEN_STAR);
+        }
+        case ',': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_COMMA);
         }
         case '/': {
             scanner->current++;
