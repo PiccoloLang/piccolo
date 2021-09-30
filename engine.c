@@ -89,12 +89,16 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) / AS_NUM(a)));
                 break;
             }
-            case OP_PRINT: {
-                piccolo_Value val = piccolo_enginePeekStack(engine);
-                evaporatePointer(&val);
-                piccolo_printValue(val);
-                printf("\n");
-                break;
+            case OP_EQUAL: {
+                piccolo_Value a = piccolo_enginePopStack(engine);
+                evaporatePointer(&a);
+                piccolo_Value b = piccolo_enginePopStack(engine);
+                evaporatePointer(&b);
+                if(IS_NUM(a) && IS_NUM(b)) {
+                    piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) == AS_NUM(b)));
+                    break;
+                }
+                piccolo_enginePushStack(engine, BOOL_VAL(false));
             }
             case OP_POP_STACK: {
                 piccolo_enginePopStack(engine);
@@ -133,7 +137,7 @@ static bool run(struct piccolo_Engine* engine) {
                 int jumpDist = READ_PARAM();
                 piccolo_Value condition = piccolo_enginePopStack(engine);
                 if(!IS_BOOL(condition)) {
-                    piccolo_runtimeError(engine, "Condition must be boolean");
+                    piccolo_runtimeError(engine, "Condition must be a boolean.");
                     break;
                 }
                 if(!AS_BOOL(condition)) {

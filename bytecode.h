@@ -12,7 +12,7 @@ typedef enum {
     OP_RETURN,
     OP_CONST,
     OP_ADD, OP_SUB, OP_MUL, OP_DIV,
-    OP_PRINT,
+    OP_EQUAL,
     OP_POP_STACK,
 
     OP_GET_GLOBAL,

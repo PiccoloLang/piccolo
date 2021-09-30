@@ -14,6 +14,7 @@ enum piccolo_TokenType {
     PICCOLO_TOKEN_LEFT_BRACE, PICCOLO_TOKEN_RIGHT_BRACE,
 
     // 2 chars
+    PICCOLO_TOKEN_EQ_EQ,
     PICCOLO_TOKEN_ARROW,
 
     // Literals

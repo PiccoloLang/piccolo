@@ -246,9 +246,19 @@ static void compileAdditive(COMPILE_PARAMETERS) {
     }
 }
 
+static void compileComparison(COMPILE_PARAMETERS) {
+    compileAdditive(COMPILE_ARGUMENTS);
+    while(compiler->current.type == PICCOLO_TOKEN_EQ_EQ) {
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        compileAdditive(COMPILE_ARGUMENTS_REQ_VAL);
+        piccolo_writeBytecode(engine, bytecode, OP_EQUAL, charIdx);
+    }
+}
+
 static void compileVarSet(COMPILE_PARAMETERS) {
     int charIdx = compiler->current.charIdx;
-    compileAdditive(COMPILE_ARGUMENTS);
+    compileComparison(COMPILE_ARGUMENTS);
     if(compiler->current.type == PICCOLO_TOKEN_EQ) {
         charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
@@ -334,6 +344,7 @@ static void compileIf(COMPILE_PARAMETERS) {
         int elseStartAddr = bytecode->code.count;
 
         if(compiler->current.type == PICCOLO_TOKEN_ELSE) {
+            advanceCompiler(engine, compiler);
             compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
         } else {
             piccolo_writeConst(engine, bytecode, NIL_VAL(), charIdx);

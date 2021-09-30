@@ -92,6 +92,10 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
         }
         case '=': {
             scanner->current++;
+            if(*scanner->current == '=') {
+                scanner->current++;
+                return makeToken(scanner, PICCOLO_TOKEN_EQ_EQ);
+            }
             return makeToken(scanner, PICCOLO_TOKEN_EQ);
         }
         case '(': {
