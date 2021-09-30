@@ -320,6 +320,37 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
     compileVarSet(COMPILE_ARGUMENTS);
 }
 
+static void compileIf(COMPILE_PARAMETERS) {
+    if(compiler->current.type == PICCOLO_TOKEN_IF) {
+        advanceCompiler(engine, compiler);
+        int charIdx = compiler->current.charIdx;
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+        int ifStartAddr = bytecode->code.count;
+        piccolo_writeParameteredBytecode(engine, bytecode, OP_JUMP_FALSE, 0, charIdx);
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+
+        int ifEndAddr = bytecode->code.count;
+        piccolo_writeParameteredBytecode(engine, bytecode, OP_JUMP, 0, charIdx);
+        int elseStartAddr = bytecode->code.count;
+
+        if(compiler->current.type == PICCOLO_TOKEN_ELSE) {
+            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+        } else {
+            piccolo_writeConst(engine, bytecode, NIL_VAL(), charIdx);
+        }
+
+        int elseEndAddr = bytecode->code.count;
+
+        piccolo_patchParam(bytecode, ifStartAddr, elseStartAddr - ifStartAddr);
+        piccolo_patchParam(bytecode, ifEndAddr, elseEndAddr - ifEndAddr);
+
+        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
+            piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, charIdx);
+        return;
+    }
+    compileVarDecl(COMPILE_ARGUMENTS);
+}
+
 static void compileBlock(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_LEFT_BRACE) {
         int localsBefore = compiler->locals.count;
@@ -338,7 +369,7 @@ static void compileBlock(COMPILE_PARAMETERS) {
         compiler->locals.count = localsBefore;
         return;
     }
-    compileVarDecl(COMPILE_ARGUMENTS);
+    compileIf(COMPILE_ARGUMENTS);
 }
 
 static void compileExpr(COMPILE_PARAMETERS) {

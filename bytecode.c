@@ -32,3 +32,8 @@ void piccolo_writeConst(struct piccolo_Engine* engine, struct piccolo_Bytecode* 
     piccolo_writeValueArray(engine, &bytecode->constants, constant);
     piccolo_writeParameteredBytecode(engine, bytecode, OP_CONST, constIdx, charIdx);
 }
+
+void piccolo_patchParam(struct piccolo_Bytecode* bytecode, int addr, uint16_t param) {
+    bytecode->code.values[addr + 1] = (param & 0xFF00) >> 8;
+    bytecode->code.values[addr + 2] = (param & 0x00FF) >> 0;
+}

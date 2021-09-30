@@ -124,6 +124,23 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, value);
                 break;
             }
+            case OP_JUMP: {
+                int jumpDist = READ_PARAM();
+                engine->frames[engine->currFrame].ip += jumpDist - 3;
+                break;
+            }
+            case OP_JUMP_FALSE: {
+                int jumpDist = READ_PARAM();
+                piccolo_Value condition = piccolo_enginePopStack(engine);
+                if(!IS_BOOL(condition)) {
+                    piccolo_runtimeError(engine, "Condition must be boolean");
+                    break;
+                }
+                if(!AS_BOOL(condition)) {
+                    engine->frames[engine->currFrame].ip += jumpDist - 3;
+                }
+                break;
+            }
             case OP_CALL: {
                 int argCount = READ_PARAM();
                 engine->currFrame++;

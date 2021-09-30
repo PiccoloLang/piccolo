@@ -19,6 +19,9 @@ typedef enum {
     OP_GET_STACK,
     OP_SET,
 
+    OP_JUMP,
+    OP_JUMP_FALSE,
+
     OP_CALL
 } piccolo_OpCode;
 
@@ -37,5 +40,6 @@ void piccolo_freeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode
 void piccolo_writeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, uint8_t byte, int charIdx);
 void piccolo_writeParameteredBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, uint8_t byte, uint16_t param, int charIdx);
 void piccolo_writeConst(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, piccolo_Value value, int charIdx);
+void piccolo_patchParam(struct piccolo_Bytecode* bytecode, int addr, uint16_t param);
 
 #endif
