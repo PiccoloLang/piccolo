@@ -147,7 +147,7 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
         functionCompiler.hadError = false;
 
         compileExpr(engine, &functionCompiler, &function->bytecode, true, false);
-
+        piccolo_writeBytecode(engine, &function->bytecode, OP_RETURN, 1);
         freeCompiler(engine, &functionCompiler);
 
         if(functionCompiler.hadError)
@@ -262,19 +262,6 @@ static void compileVarSet(COMPILE_PARAMETERS) {
     }
 }
 
-static void compilePrint(COMPILE_PARAMETERS) {
-    if(compiler->current.type == PICCOLO_TOKEN_PRINT) {
-        int charIdx = compiler->current.charIdx;
-        advanceCompiler(engine, compiler);
-        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
-        piccolo_writeBytecode(engine, bytecode, OP_PRINT, charIdx);
-        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
-            piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, charIdx);
-        return;
-    }
-    compileVarSet(COMPILE_ARGUMENTS);
-}
-
 static void compileVarDecl(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_VAR) {
         advanceCompiler(engine, compiler);
@@ -330,7 +317,7 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
             piccolo_writeBytecode(engine, bytecode, OP_POP_STACK, eqCharIdx);
         return;
     }
-    compilePrint(COMPILE_ARGUMENTS);
+    compileVarSet(COMPILE_ARGUMENTS);
 }
 
 static void compileBlock(COMPILE_PARAMETERS) {

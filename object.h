@@ -6,7 +6,8 @@
 #include "engine.h"
 
 enum piccolo_ObjType {
-    PICCOLO_OBJ_FUNC
+    PICCOLO_OBJ_FUNC,
+    PICCOLO_OBJ_NATIVE_FN
 };
 
 struct piccolo_Obj {
@@ -19,6 +20,12 @@ struct piccolo_ObjFunction {
     int arity;
 };
 
+struct piccolo_ObjNativeFn {
+    struct piccolo_Obj obj;
+    piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args);
+};
+
 struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine);
+struct piccolo_ObjNativeFn* piccolo_makeNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args));
 
 #endif

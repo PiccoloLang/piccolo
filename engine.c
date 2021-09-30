@@ -23,21 +23,22 @@ static void evaporatePointer(piccolo_Value* value) {
 }
 
 static bool run(struct piccolo_Engine* engine) {
-#define READ_BYTE() (*(engine->currFrame->ip++))
+#define READ_BYTE() (engine->frames[engine->currFrame].bytecode->code.values[engine->frames[engine->currFrame].ip++])
 #define READ_PARAM() ((READ_BYTE() << 8) + READ_BYTE())
+    engine->hadError = false;
     while(true) {
-        engine->currFrame->prevIp = engine->currFrame->ip;
+        engine->frames[engine->currFrame].prevIp = engine->frames[engine->currFrame].ip;
         uint8_t opcode = READ_BYTE();
         switch(opcode) {
             case OP_RETURN:
-                if(engine->currFrame == engine->frames)
+                if(engine->currFrame == 0)
                     return true;
                 engine->currFrame--;
-                engine->currFrame->prevIp = engine->currFrame->ip;
-                engine->bytecode = engine->currFrame->bytecode;
+                engine->frames[engine->currFrame].prevIp = engine->frames[engine->currFrame].ip;
+                engine->frames[engine->currFrame].bytecode = engine->frames[engine->currFrame].bytecode;
                 break;
             case OP_CONST: {
-                piccolo_enginePushStack(engine, engine->bytecode->constants.values[READ_PARAM()]);
+                piccolo_enginePushStack(engine, engine->frames[engine->currFrame].bytecode->constants.values[READ_PARAM()]);
                 break;
             }
             case OP_ADD: {
@@ -101,7 +102,7 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case OP_GET_STACK: {
                 int slot = READ_PARAM();
-                piccolo_enginePushStack(engine, PTR_VAL(engine->currFrame->varStack + slot));
+                piccolo_enginePushStack(engine, PTR_VAL(engine->frames[engine->currFrame].varStack + slot));
                 break;
             }
             case OP_GET_GLOBAL: {
@@ -127,21 +128,32 @@ static bool run(struct piccolo_Engine* engine) {
                 int argCount = READ_PARAM();
                 engine->currFrame++;
                 for(int i = argCount - 1; i >= 0; i--) {
-                    engine->currFrame->varStack[i] = piccolo_enginePopStack(engine);
-                    evaporatePointer(&engine->currFrame->varStack[i]);
+                    engine->frames[engine->currFrame].varStack[i] = piccolo_enginePopStack(engine);
+                    evaporatePointer(&engine->frames[engine->currFrame].varStack[i]);
                 }
                 piccolo_Value func = piccolo_enginePopStack(engine);
                 evaporatePointer(&func);
-                if(!IS_OBJ(func) || AS_OBJ(func)->type != PICCOLO_OBJ_FUNC) {
+
+                if(!IS_OBJ(func) || (AS_OBJ(func)->type != PICCOLO_OBJ_FUNC && AS_OBJ(func)->type != PICCOLO_OBJ_NATIVE_FN)) {
+                    engine->currFrame--;
                     piccolo_runtimeError(engine, "Cannot call %s.", piccolo_getTypeName(func));
                     break;
                 }
-                struct piccolo_ObjFunction* funcObj = (struct piccolo_ObjFunction*)AS_OBJ(func);
-                engine->currFrame->ip = engine->currFrame->prevIp = funcObj->bytecode.code.values;
-                engine->currFrame->bytecode = &funcObj->bytecode;
-                engine->bytecode = &funcObj->bytecode;
-                if(funcObj->arity != argCount) {
-                    piccolo_runtimeError(engine, "Wrong argument count.");
+                enum piccolo_ObjType type = AS_OBJ(func)->type;
+
+                if(type == PICCOLO_OBJ_FUNC) {
+                    struct piccolo_ObjFunction *funcObj = (struct piccolo_ObjFunction*)AS_OBJ(func);
+                    engine->frames[engine->currFrame].ip = engine->frames[engine->currFrame].prevIp = 0;
+                    engine->frames[engine->currFrame].bytecode = &funcObj->bytecode;
+                    if (funcObj->arity != argCount) {
+                        piccolo_runtimeError(engine, "Wrong argument count.");
+                        break;
+                    }
+                }
+                if(type == PICCOLO_OBJ_NATIVE_FN) {
+                    struct piccolo_ObjNativeFn* native = (struct piccolo_ObjNativeFn*)AS_OBJ(func);
+                    piccolo_enginePushStack(engine, native->native(engine, argCount, engine->frames[engine->currFrame].varStack));
+                    engine->currFrame--;
                     break;
                 }
                 break;
@@ -165,10 +177,10 @@ bool piccolo_executePackage(struct piccolo_Engine* engine, struct piccolo_Packag
 }
 
 bool piccolo_executeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode) {
-    engine->bytecode = bytecode;
-    engine->currFrame = engine->frames;
-    engine->currFrame->ip = bytecode->code.values;
-    engine->currFrame->bytecode = bytecode;
+    engine->currFrame = 0;
+    engine->frames[engine->currFrame].ip = 0;
+    engine->frames[engine->currFrame].bytecode = bytecode;
+    engine->stackTop = engine->stack;
     return run(engine);
 }
 
@@ -201,7 +213,7 @@ void piccolo_runtimeError(struct piccolo_Engine* engine, const char* format, ...
     va_end(args);
     piccolo_enginePrintError(engine, "\n");
 
-    int charIdx = engine->bytecode->charIdxs.values[engine->currFrame->prevIp - engine->bytecode->code.values];
+    int charIdx = engine->frames[engine->currFrame].bytecode->charIdxs.values[engine->frames[engine->currFrame].prevIp];
     struct piccolo_strutil_LineInfo opLine = piccolo_strutil_getLine(engine->currentPackage->source, charIdx);
     piccolo_enginePrintError(engine, "[line %d] %.*s\n", opLine.line + 1, opLine.lineEnd - opLine.lineStart, opLine.lineStart);
 

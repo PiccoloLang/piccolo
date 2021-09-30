@@ -6,6 +6,20 @@
 #include "engine.h"
 #include "compiler.h"
 #include "util/file.h"
+#include "object.h"
+
+
+// TODO: decouple this
+#include "embedding.h"
+#include <stdio.h>
+static struct piccolo_Value printNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+    for(int i = 0; i < argc; i++) {
+        piccolo_printValue(args[i]);
+        printf(" ");
+    }
+    printf("\n");
+    return NIL_VAL();
+}
 
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     piccolo_initValueArray(&package->globals);
@@ -22,6 +36,8 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
         piccolo_enginePrintError(engine, "Could not load package %s\n", filepath);
         return package;
     }
+
+    piccolo_defineGlobal(engine, package, "print", OBJ_VAL(piccolo_makeNative(engine, printNative)));
 
     if(!piccolo_compilePackage(engine, package)) {
         piccolo_enginePrintError(engine, "Compilation error.\n");

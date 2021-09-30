@@ -21,7 +21,6 @@ enum piccolo_TokenType {
 
     // Keywords
     PICCOLO_TOKEN_VAR,
-    PICCOLO_TOKEN_PRINT,
     PICCOLO_TOKEN_FN,
 
     // Misc

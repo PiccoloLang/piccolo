@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include "value.h"
 #include "object.h"
-#include "debug/disassembler.h"
 
 PICCOLO_DYNARRAY_IMPL(piccolo_Value, Value)
 
@@ -45,6 +44,13 @@ char* piccolo_getTypeName(piccolo_Value value) {
     }
     if(IS_PTR(value)) {
         return "ptr";
+    }
+    if(IS_OBJ(value)) {
+        enum piccolo_ObjType type = AS_OBJ(value)->type;
+        if(type == PICCOLO_OBJ_FUNC)
+            return "fn";
+        if(type == PICCOLO_OBJ_NATIVE_FN)
+            return "native fn";
     }
     return "Unknown";
 }
