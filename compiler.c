@@ -296,8 +296,6 @@ static void compileBoolOperations(COMPILE_PARAMETERS) {
         int shortCircuitJumpAddr = bytecode->code.count;
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP_FALSE, 0, charIdx);
         compileEquality(COMPILE_ARGUMENTS_REQ_VAL);
-        if(op == PICCOLO_TOKEN_OR)
-            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_NOT, charIdx);
         int skipValueJumpAddr = bytecode->code.count;
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP, 0, charIdx);
         int valueAddr = bytecode->code.count;
