@@ -279,9 +279,34 @@ static void compileEquality(COMPILE_PARAMETERS) {
     }
 }
 
+static void compileBoolOperations(COMPILE_PARAMETERS) {
+    compileEquality(COMPILE_ARGUMENTS);
+    while(compiler->current.type == PICCOLO_TOKEN_AND || compiler->current.type == PICCOLO_TOKEN_OR) {
+        enum piccolo_TokenType op = compiler->current.type;
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        if(op == PICCOLO_TOKEN_OR) {
+            piccolo_writeBytecode(engine, bytecode, OP_NOT, charIdx);
+        }
+        int shortCircuitJumpAddr = bytecode->code.count;
+        piccolo_writeParameteredBytecode(engine, bytecode, OP_JUMP_FALSE, 0, charIdx);
+        compileEquality(COMPILE_ARGUMENTS_REQ_VAL);
+        if(op == PICCOLO_TOKEN_OR)
+            piccolo_writeBytecode(engine, bytecode, OP_NOT, charIdx);
+        int skipValueJumpAddr = bytecode->code.count;
+        piccolo_writeParameteredBytecode(engine, bytecode, OP_JUMP, 0, charIdx);
+        int valueAddr = bytecode->code.count;
+        piccolo_writeConst(engine, bytecode, BOOL_VAL(op == PICCOLO_TOKEN_OR), charIdx);
+        int endAddr = bytecode->code.count;
+
+        piccolo_patchParam(bytecode, shortCircuitJumpAddr, valueAddr - shortCircuitJumpAddr);
+        piccolo_patchParam(bytecode, skipValueJumpAddr, endAddr - skipValueJumpAddr);
+    }
+}
+
 static void compileVarSet(COMPILE_PARAMETERS) {
     int charIdx = compiler->current.charIdx;
-    compileEquality(COMPILE_ARGUMENTS);
+    compileBoolOperations(COMPILE_ARGUMENTS);
     if(compiler->current.type == PICCOLO_TOKEN_EQ) {
         charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);

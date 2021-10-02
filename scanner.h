@@ -25,6 +25,7 @@ enum piccolo_TokenType {
     // Keywords
     PICCOLO_TOKEN_VAR,
     PICCOLO_TOKEN_FN,
+    PICCOLO_TOKEN_AND, PICCOLO_TOKEN_OR,
     PICCOLO_TOKEN_IF, PICCOLO_TOKEN_ELSE,
 
     // Misc
