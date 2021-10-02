@@ -214,6 +214,7 @@ static bool run(struct piccolo_Engine* engine) {
                     engine->frames[engine->currFrame].ip = engine->frames[engine->currFrame].prevIp = 0;
                     engine->frames[engine->currFrame].bytecode = &funcObj->bytecode;
                     if (funcObj->arity != argCount) {
+                        engine->currFrame--;
                         piccolo_runtimeError(engine, "Wrong argument count.");
                         break;
                     }
