@@ -195,7 +195,7 @@ static void compileFnCall(COMPILE_PARAMETERS) {
             }
             compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
             if(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN && compiler->current.type != PICCOLO_TOKEN_COMMA)
-                compilationError(engine, compiler, "Expected ,.");
+                compilationError(engine, compiler, "Expected comma.");
             if(compiler->current.type == PICCOLO_TOKEN_COMMA)
                 advanceCompiler(engine, compiler);
 
@@ -207,12 +207,17 @@ static void compileFnCall(COMPILE_PARAMETERS) {
 }
 
 static void compileUnary(COMPILE_PARAMETERS) {
-    if(compiler->current.type == PICCOLO_TOKEN_MINUS) {
+    while(compiler->current.type == PICCOLO_TOKEN_MINUS || compiler->current.type == PICCOLO_TOKEN_BANG) {
+        enum piccolo_TokenType op = compiler->current.type;
         int charIdx = compiler->current.charIdx;
-        piccolo_writeConst(engine, bytecode, NUM_VAL(0), charIdx);
         advanceCompiler(engine, compiler);
-        compileUnary(COMPILE_ARGUMENTS_REQ_VAL);
-        piccolo_writeBytecode(engine, bytecode, OP_SUB, charIdx);
+        if(op == PICCOLO_TOKEN_MINUS)
+            piccolo_writeConst(engine, bytecode, NUM_VAL(0), charIdx);
+        compileFnCall(COMPILE_ARGUMENTS_REQ_VAL);
+        if(op == PICCOLO_TOKEN_MINUS)
+            piccolo_writeBytecode(engine, bytecode, OP_SUB, charIdx);
+        if(op == PICCOLO_TOKEN_BANG)
+            piccolo_writeBytecode(engine, bytecode, OP_NOT, charIdx);
         return;
     }
     compileFnCall(COMPILE_ARGUMENTS);
