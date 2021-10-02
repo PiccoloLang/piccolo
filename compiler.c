@@ -248,17 +248,40 @@ static void compileAdditive(COMPILE_PARAMETERS) {
 
 static void compileComparison(COMPILE_PARAMETERS) {
     compileAdditive(COMPILE_ARGUMENTS);
-    while(compiler->current.type == PICCOLO_TOKEN_EQ_EQ) {
+    while(compiler->current.type == PICCOLO_TOKEN_GREATER || compiler->current.type == PICCOLO_TOKEN_LESS ||
+          compiler->current.type == PICCOLO_TOKEN_GREATER_EQ || compiler->current.type == PICCOLO_TOKEN_LESS_EQ) {
+        enum piccolo_TokenType operation = compiler->current.type;
         int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
         compileAdditive(COMPILE_ARGUMENTS_REQ_VAL);
+        if(operation == PICCOLO_TOKEN_GREATER)
+            piccolo_writeBytecode(engine, bytecode, OP_GREATER, charIdx);
+        if(operation == PICCOLO_TOKEN_LESS)
+            piccolo_writeBytecode(engine, bytecode, OP_LESS, charIdx);
+        if(operation == PICCOLO_TOKEN_GREATER_EQ) {
+            piccolo_writeBytecode(engine, bytecode, OP_LESS, charIdx);
+            piccolo_writeBytecode(engine, bytecode, OP_NOT, charIdx);
+        }
+        if(operation == PICCOLO_TOKEN_LESS_EQ) {
+            piccolo_writeBytecode(engine, bytecode, OP_GREATER, charIdx);
+            piccolo_writeBytecode(engine, bytecode, OP_NOT, charIdx);
+        }
+    }
+}
+
+static void compileEquality(COMPILE_PARAMETERS) {
+    compileComparison(COMPILE_ARGUMENTS);
+    while(compiler->current.type == PICCOLO_TOKEN_EQ_EQ) {
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        compileComparison(COMPILE_ARGUMENTS_REQ_VAL);
         piccolo_writeBytecode(engine, bytecode, OP_EQUAL, charIdx);
     }
 }
 
 static void compileVarSet(COMPILE_PARAMETERS) {
     int charIdx = compiler->current.charIdx;
-    compileComparison(COMPILE_ARGUMENTS);
+    compileEquality(COMPILE_ARGUMENTS);
     if(compiler->current.type == PICCOLO_TOKEN_EQ) {
         charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);

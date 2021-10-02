@@ -33,6 +33,9 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         SIMPLE_INSTRUCTION(OP_DIV)
 
         SIMPLE_INSTRUCTION(OP_EQUAL)
+        SIMPLE_INSTRUCTION(OP_GREATER)
+        SIMPLE_INSTRUCTION(OP_LESS)
+        SIMPLE_INSTRUCTION(OP_NOT)
 
         SIMPLE_INSTRUCTION(OP_POP_STACK)
 

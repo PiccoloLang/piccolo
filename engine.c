@@ -98,7 +98,48 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) == AS_NUM(b)));
                     break;
                 }
+                if(IS_BOOL(a) && IS_BOOL(b)) {
+                    piccolo_enginePushStack(engine, BOOL_VAL(AS_BOOL(a) == AS_BOOL(b)));
+                    break;
+                }
+                if(IS_NIL(a) && IS_NIL(b)) {
+                    piccolo_enginePushStack(engine, BOOL_VAL(true));
+                    break;
+                }
                 piccolo_enginePushStack(engine, BOOL_VAL(false));
+            }
+            case OP_GREATER: {
+                piccolo_Value a = piccolo_enginePopStack(engine);
+                evaporatePointer(&a);
+                piccolo_Value b = piccolo_enginePopStack(engine);
+                evaporatePointer(&b);
+                if(!IS_NUM(a) || !IS_NUM(b)) {
+                    piccolo_runtimeError(engine, "Cannot compare %s and %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
+                    break;
+                }
+                piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) < AS_NUM(b)));
+                break;
+            }
+            case OP_NOT: {
+                piccolo_Value val = piccolo_enginePopStack(engine);
+                evaporatePointer(&val);
+                if(!IS_BOOL(val)) {
+                    piccolo_runtimeError(engine, "Cannot negate %s.", piccolo_getTypeName(val));
+                    break;
+                }
+                piccolo_enginePushStack(engine, BOOL_VAL(!AS_BOOL(val)));
+                break;
+            }
+            case OP_LESS: {
+                piccolo_Value a = piccolo_enginePopStack(engine);
+                evaporatePointer(&a);
+                piccolo_Value b = piccolo_enginePopStack(engine);
+                evaporatePointer(&b);
+                if(!IS_NUM(a) || !IS_NUM(b)) {
+                    piccolo_runtimeError(engine, "Cannot compare %s and %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
+                }
+                piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) > AS_NUM(b)));
+                break;
             }
             case OP_POP_STACK: {
                 piccolo_enginePopStack(engine);
@@ -155,6 +196,12 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value func = piccolo_enginePopStack(engine);
                 evaporatePointer(&func);
 
+                if(engine->currFrame == 255) {
+                    engine->currFrame--;
+                    piccolo_runtimeError(engine, "Recursion stack overflow.");
+                    break;
+                }
+
                 if(!IS_OBJ(func) || (AS_OBJ(func)->type != PICCOLO_OBJ_FUNC && AS_OBJ(func)->type != PICCOLO_OBJ_NATIVE_FN)) {
                     engine->currFrame--;
                     piccolo_runtimeError(engine, "Cannot call %s.", piccolo_getTypeName(func));
@@ -173,8 +220,8 @@ static bool run(struct piccolo_Engine* engine) {
                 }
                 if(type == PICCOLO_OBJ_NATIVE_FN) {
                     struct piccolo_ObjNativeFn* native = (struct piccolo_ObjNativeFn*)AS_OBJ(func);
-                    piccolo_enginePushStack(engine, native->native(engine, argCount, engine->frames[engine->currFrame].varStack));
                     engine->currFrame--;
+                    piccolo_enginePushStack(engine, native->native(engine, argCount, engine->frames[engine->currFrame + 1].varStack));
                     break;
                 }
                 break;
