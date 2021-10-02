@@ -30,18 +30,18 @@ static bool run(struct piccolo_Engine* engine) {
         engine->frames[engine->currFrame].prevIp = engine->frames[engine->currFrame].ip;
         uint8_t opcode = READ_BYTE();
         switch(opcode) {
-            case OP_RETURN:
+            case PICCOLO_OP_RETURN:
                 if(engine->currFrame == 0)
                     return true;
                 engine->currFrame--;
                 engine->frames[engine->currFrame].prevIp = engine->frames[engine->currFrame].ip;
                 engine->frames[engine->currFrame].bytecode = engine->frames[engine->currFrame].bytecode;
                 break;
-            case OP_CONST: {
+            case PICCOLO_OP_CONST: {
                 piccolo_enginePushStack(engine, engine->frames[engine->currFrame].bytecode->constants.values[READ_PARAM()]);
                 break;
             }
-            case OP_ADD: {
+            case PICCOLO_OP_ADD: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
@@ -53,7 +53,7 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) + AS_NUM(a)));
                 break;
             }
-            case OP_SUB: {
+            case PICCOLO_OP_SUB: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
@@ -65,7 +65,7 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) - AS_NUM(a)));
                 break;
             }
-            case OP_MUL: {
+            case PICCOLO_OP_MUL: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
@@ -77,7 +77,7 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) * AS_NUM(a)));
                 break;
             }
-            case OP_DIV: {
+            case PICCOLO_OP_DIV: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
@@ -89,7 +89,7 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) / AS_NUM(a)));
                 break;
             }
-            case OP_EQUAL: {
+            case PICCOLO_OP_EQUAL: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
                 piccolo_Value b = piccolo_enginePopStack(engine);
@@ -108,7 +108,7 @@ static bool run(struct piccolo_Engine* engine) {
                 }
                 piccolo_enginePushStack(engine, BOOL_VAL(false));
             }
-            case OP_GREATER: {
+            case PICCOLO_OP_GREATER: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
                 piccolo_Value b = piccolo_enginePopStack(engine);
@@ -120,7 +120,7 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) < AS_NUM(b)));
                 break;
             }
-            case OP_NOT: {
+            case PICCOLO_OP_NOT: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
                 evaporatePointer(&val);
                 if(!IS_BOOL(val)) {
@@ -130,7 +130,7 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, BOOL_VAL(!AS_BOOL(val)));
                 break;
             }
-            case OP_LESS: {
+            case PICCOLO_OP_LESS: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
                 piccolo_Value b = piccolo_enginePopStack(engine);
@@ -141,23 +141,23 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) > AS_NUM(b)));
                 break;
             }
-            case OP_POP_STACK: {
+            case PICCOLO_OP_POP_STACK: {
                 piccolo_enginePopStack(engine);
                 break;
             }
-            case OP_GET_STACK: {
+            case PICCOLO_OP_GET_STACK: {
                 int slot = READ_PARAM();
                 piccolo_enginePushStack(engine, PTR_VAL(engine->frames[engine->currFrame].varStack + slot));
                 break;
             }
-            case OP_GET_GLOBAL: {
+            case PICCOLO_OP_GET_GLOBAL: {
                 int slot = READ_PARAM();
                 while(engine->currentPackage->globals.count <= slot)
                     piccolo_writeValueArray(engine, &engine->currentPackage->globals, NIL_VAL());
                 piccolo_enginePushStack(engine, PTR_VAL(engine->currentPackage->globals.values + slot));
                 break;
             }
-            case OP_SET: {
+            case PICCOLO_OP_SET: {
                 piccolo_Value value = piccolo_enginePopStack(engine);
                 evaporatePointer(&value);
                 piccolo_Value ptr = piccolo_enginePopStack(engine);
@@ -169,12 +169,12 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, value);
                 break;
             }
-            case OP_JUMP: {
+            case PICCOLO_OP_JUMP: {
                 int jumpDist = READ_PARAM();
                 engine->frames[engine->currFrame].ip += jumpDist - 3;
                 break;
             }
-            case OP_JUMP_FALSE: {
+            case PICCOLO_OP_JUMP_FALSE: {
                 int jumpDist = READ_PARAM();
                 piccolo_Value condition = piccolo_enginePopStack(engine);
                 if(!IS_BOOL(condition)) {
@@ -186,7 +186,7 @@ static bool run(struct piccolo_Engine* engine) {
                 }
                 break;
             }
-            case OP_CALL: {
+            case PICCOLO_OP_CALL: {
                 int argCount = READ_PARAM();
                 engine->currFrame++;
                 for(int i = argCount - 1; i >= 0; i--) {

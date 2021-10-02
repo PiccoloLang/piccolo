@@ -20,33 +20,33 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
 
     printf("%4d | ", offset);
     switch(bytecode->code.values[offset]) {
-        SIMPLE_INSTRUCTION(OP_RETURN)
-        case OP_CONST: {
-            printf("OP_CONST { ");
+        SIMPLE_INSTRUCTION(PICCOLO_OP_RETURN)
+        case PICCOLO_OP_CONST: {
+            printf("PICCOLO_OP_CONST { ");
             piccolo_printValue(bytecode->constants.values[getInstructionParam(bytecode, offset)]);
             printf(" }\n");
             return offset + 3;
         }
-        SIMPLE_INSTRUCTION(OP_ADD)
-        SIMPLE_INSTRUCTION(OP_SUB)
-        SIMPLE_INSTRUCTION(OP_MUL)
-        SIMPLE_INSTRUCTION(OP_DIV)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_ADD)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_SUB)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_MUL)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_DIV)
 
-        SIMPLE_INSTRUCTION(OP_EQUAL)
-        SIMPLE_INSTRUCTION(OP_GREATER)
-        SIMPLE_INSTRUCTION(OP_LESS)
-        SIMPLE_INSTRUCTION(OP_NOT)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_EQUAL)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_GREATER)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_LESS)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_NOT)
 
-        SIMPLE_INSTRUCTION(OP_POP_STACK)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_POP_STACK)
 
-        PARAM_INSTRUCTION(OP_GET_GLOBAL)
-        PARAM_INSTRUCTION(OP_GET_STACK)
-        SIMPLE_INSTRUCTION(OP_SET)
+        PARAM_INSTRUCTION(PICCOLO_OP_GET_GLOBAL)
+        PARAM_INSTRUCTION(PICCOLO_OP_GET_STACK)
+        SIMPLE_INSTRUCTION(PICCOLO_OP_SET)
 
-        PARAM_INSTRUCTION(OP_JUMP)
-        PARAM_INSTRUCTION(OP_JUMP_FALSE)
+        PARAM_INSTRUCTION(PICCOLO_OP_JUMP)
+        PARAM_INSTRUCTION(PICCOLO_OP_JUMP_FALSE)
 
-        PARAM_INSTRUCTION(OP_CALL)
+        PARAM_INSTRUCTION(PICCOLO_OP_CALL)
     }
     printf("Unknown Opcode.\n");
     return offset + 1;
