@@ -7,18 +7,22 @@
 #include "compiler.h"
 #include "util/file.h"
 #include "object.h"
-
+#include "time.h"
 
 // TODO: decouple this
 #include "embedding.h"
 #include <stdio.h>
-static struct piccolo_Value printNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+static piccolo_Value printNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
     for(int i = 0; i < argc; i++) {
         piccolo_printValue(args[i]);
         printf(" ");
     }
     printf("\n");
     return NIL_VAL();
+}
+
+static piccolo_Value clockNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+    return NUM_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
@@ -38,6 +42,7 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
     }
 
     piccolo_defineGlobal(engine, package, "print", OBJ_VAL(piccolo_makeNative(engine, printNative)));
+    piccolo_defineGlobal(engine, package, "clock", OBJ_VAL(piccolo_makeNative(engine, clockNative)));
 
     if(!piccolo_compilePackage(engine, package)) {
         piccolo_enginePrintError(engine, "Compilation error.\n");
