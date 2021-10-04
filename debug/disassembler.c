@@ -47,6 +47,17 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         PARAM_INSTRUCTION(OP_JUMP_FALSE)
 
         PARAM_INSTRUCTION(OP_CALL)
+
+        case PICCOLO_OP_CLOSURE: {
+            int upvals = getInstructionParam(bytecode, offset);
+            printf("OP_CLOSURE [ ");
+            for(int i = 0; i < upvals; i++)
+                printf("%d ", getInstructionParam(bytecode, offset + 2 + 2 * i));
+            printf("]\n");
+            return offset + 3 + 2 * upvals;
+        }
+        PARAM_INSTRUCTION(OP_GET_UPVAL)
+        SIMPLE_INSTRUCTION(OP_CLOSE_UPVALS)
     }
     printf("Unknown Opcode.\n");
     return offset + 1;

@@ -16,13 +16,20 @@ struct piccolo_Variable {
     size_t nameLen;
 };
 
+struct piccolo_Upvalue {
+    int slot;
+};
+
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Variable, Variable)
+PICCOLO_DYNARRAY_HEADER(struct piccolo_Upvalue, Upvalue)
 
 struct piccolo_Compiler {
+    struct piccolo_Compiler* enclosing;
     struct piccolo_Scanner* scanner;
     struct piccolo_Token current;
     struct piccolo_VariableArray* globals;
     struct piccolo_VariableArray locals;
+    struct piccolo_UpvalueArray upvals;
     bool hadError;
     bool cycled;
 };

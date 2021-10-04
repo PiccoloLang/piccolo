@@ -17,6 +17,22 @@ struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine) {
     return function;
 }
 
+struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo_Value* ptr) {
+    struct piccolo_ObjUpval* upval = ALLOCATE_OBJ(engine, struct piccolo_ObjUpval, PICCOLO_OBJ_UPVAL);
+    upval->valPtr = ptr;
+    upval->open = true;
+    upval->next = engine->openUpvals;
+    engine->openUpvals = upval;
+    return upval;
+}
+
+struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, struct piccolo_ObjFunction* function, int upvals) {
+    struct piccolo_ObjClosure* closure = ALLOCATE_OBJ(engine, struct piccolo_ObjClosure, PICCOLO_OBJ_CLOSURE);
+    closure->prototype = function;
+    closure->upvals = reallocate(engine, NULL, 0, sizeof(struct piccolo_ObjUpval*) * upvals);
+    return closure;
+}
+
 struct piccolo_ObjNativeFn* piccolo_makeNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args)) {
     struct piccolo_ObjNativeFn* nativeFn = ALLOCATE_OBJ(engine, struct piccolo_ObjNativeFn, PICCOLO_OBJ_NATIVE_FN);
     nativeFn->obj.type = PICCOLO_OBJ_NATIVE_FN;

@@ -14,9 +14,12 @@
 #include "object.h"
 
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Variable, Variable)
+PICCOLO_DYNARRAY_IMPL(struct piccolo_Upvalue, Upvalue)
+
 
 static void freeCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler) {
     piccolo_freeVariableArray(engine, &compiler->locals);
+    piccolo_freeUpvalueArray(engine, &compiler->upvals);
 }
 
 static void compilationError(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* format, ...) {
@@ -47,11 +50,41 @@ static void advanceCompiler(struct piccolo_Engine* engine, struct piccolo_Compil
     compiler->cycled = false;
 }
 
+static void initCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, char* source, bool skipScanner) {
+    if(!skipScanner)
+        piccolo_initScanner(compiler->scanner, source);
+    piccolo_initVariableArray(&compiler->locals);
+    piccolo_initUpvalueArray(&compiler->upvals);
+    if(!skipScanner)
+        advanceCompiler(engine, compiler);
+}
+
 static int getVarSlot(struct piccolo_VariableArray* variables, struct piccolo_Token token) {
     for(int i = 0; i < variables->count; i++)
         if(variables->values[i].nameLen == token.length && memcmp(token.start, variables->values[i].name, token.length) == 0)
             return i;
     return -1;
+}
+
+static int resolveUpvalue(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Token name) {
+    if(compiler->enclosing == NULL)
+        return -1;
+
+    int enclosingSlot = getVarSlot(&compiler->enclosing->locals, name);
+    if(enclosingSlot == -1)
+        return -1;
+
+    for(int i = 0; i < compiler->upvals.count; i++)
+        if(compiler->upvals.values[i].slot == enclosingSlot)
+            return i;
+
+    int slot = compiler->upvals.count;
+
+    struct piccolo_Upvalue upval;
+    upval.slot = enclosingSlot;
+    piccolo_writeUpvalueArray(engine, &compiler->upvals, upval);
+
+    return slot;
 }
 
 #define COMPILE_PARAMETERS struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode, bool requireValue, bool global
@@ -116,9 +149,9 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
 
         struct piccolo_Compiler functionCompiler;
+        initCompiler(engine, &functionCompiler, compiler->scanner->source, true);
         functionCompiler.scanner = compiler->scanner;
         functionCompiler.globals = compiler->globals;
-        piccolo_initVariableArray(&functionCompiler.locals);
 
         struct piccolo_ObjFunction* function = piccolo_newFunction(engine);
 
@@ -145,10 +178,10 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
         functionCompiler.current = compiler->current;
         functionCompiler.cycled = false;
         functionCompiler.hadError = false;
+        functionCompiler.enclosing = compiler;
 
         compileExpr(engine, &functionCompiler, &function->bytecode, true, false);
         piccolo_writeBytecode(engine, &function->bytecode, PICCOLO_OP_RETURN, 1);
-        freeCompiler(engine, &functionCompiler);
 
         if(functionCompiler.hadError)
             compiler->hadError = true;
@@ -156,7 +189,14 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
         compiler->current = functionCompiler.current;
 
         piccolo_writeConst(engine, bytecode, OBJ_VAL(function), charIdx);
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CLOSURE, functionCompiler.upvals.count, charIdx);
+        for(int i = 0; i < functionCompiler.upvals.count; i++) {
+            int slot = functionCompiler.upvals.values[i].slot;
+            piccolo_writeBytecode(engine, bytecode, (slot & 0xFF00) >> 8, charIdx);
+            piccolo_writeBytecode(engine, bytecode, (slot & 0x00FF) >> 0, charIdx);
+        }
 
+        freeCompiler(engine, &functionCompiler);
         return;
     }
     compileLiteral(COMPILE_ARGUMENTS);
@@ -169,7 +209,12 @@ static void compileVarLookup(COMPILE_PARAMETERS) {
         if(globalSlot == -1) {
             int localSlot = getVarSlot(&compiler->locals, varName);
             if(localSlot == -1) {
-                compilationError(engine, compiler, "Variable %.*s is not defined.", varName.length, varName.start);
+                int upvalSlot = resolveUpvalue(engine, compiler, varName);
+                if(upvalSlot == -1) {
+                    compilationError(engine, compiler, "Variable %.*s is not defined.", varName.length, varName.start);
+                } else {
+                    piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_UPVAL, upvalSlot, varName.charIdx);
+                }
             } else {
                 piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_STACK, localSlot, varName.charIdx);
             }
@@ -429,6 +474,7 @@ static void compileBlock(COMPILE_PARAMETERS) {
         if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
         compiler->locals.count = localsBefore;
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
         return;
     }
     compileIf(COMPILE_ARGUMENTS);
@@ -444,18 +490,13 @@ static void compileExpr(COMPILE_PARAMETERS) {
     }
 }
 
-static void initCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, char* source) {
-    piccolo_initScanner(compiler->scanner, source);
-    piccolo_initVariableArray(&compiler->locals);
-    advanceCompiler(engine, compiler);
-}
-
 bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     struct piccolo_Compiler compiler;
     struct piccolo_Scanner scanner;
     compiler.scanner = &scanner;
-    initCompiler(engine, &compiler, package->source);
+    initCompiler(engine, &compiler, package->source, false);
     compiler.globals = &package->globalVars;
+    compiler.enclosing = NULL;
 
     compileExpr(engine, &compiler, &package->bytecode, false, true);
     if(compiler.current.type != PICCOLO_TOKEN_EOF) {

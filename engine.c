@@ -11,6 +11,7 @@
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list)) {
     engine->printError = printError;
     engine->stackTop = engine->stack;
+    engine->openUpvals = NULL;
 }
 
 void piccolo_freeEngine(struct piccolo_Engine* engine) {
@@ -35,7 +36,7 @@ static bool run(struct piccolo_Engine* engine) {
                     return true;
                 engine->currFrame--;
                 engine->frames[engine->currFrame].prevIp = engine->frames[engine->currFrame].ip;
-                engine->frames[engine->currFrame].bytecode = engine->frames[engine->currFrame].bytecode;
+                evaporatePointer(engine->stackTop - 1);
                 break;
             case PICCOLO_OP_CONST: {
                 piccolo_enginePushStack(engine, engine->frames[engine->currFrame].bytecode->constants.values[READ_PARAM()]);
@@ -202,17 +203,19 @@ static bool run(struct piccolo_Engine* engine) {
                     break;
                 }
 
-                if(!IS_OBJ(func) || (AS_OBJ(func)->type != PICCOLO_OBJ_FUNC && AS_OBJ(func)->type != PICCOLO_OBJ_NATIVE_FN)) {
+                if(!IS_OBJ(func) || (AS_OBJ(func)->type != PICCOLO_OBJ_CLOSURE && AS_OBJ(func)->type != PICCOLO_OBJ_NATIVE_FN)) {
                     engine->currFrame--;
                     piccolo_runtimeError(engine, "Cannot call %s.", piccolo_getTypeName(func));
                     break;
                 }
                 enum piccolo_ObjType type = AS_OBJ(func)->type;
 
-                if(type == PICCOLO_OBJ_FUNC) {
-                    struct piccolo_ObjFunction *funcObj = (struct piccolo_ObjFunction*)AS_OBJ(func);
+                if(type == PICCOLO_OBJ_CLOSURE) {
+                    struct piccolo_ObjClosure* closureObj = (struct piccolo_ObjClosure*)AS_OBJ(func);
+                    struct piccolo_ObjFunction* funcObj = closureObj->prototype;
                     engine->frames[engine->currFrame].ip = engine->frames[engine->currFrame].prevIp = 0;
                     engine->frames[engine->currFrame].bytecode = &funcObj->bytecode;
+                    engine->frames[engine->currFrame].closure = closureObj;
                     if (funcObj->arity != argCount) {
                         engine->currFrame--;
                         piccolo_runtimeError(engine, "Wrong argument count.");
@@ -224,6 +227,33 @@ static bool run(struct piccolo_Engine* engine) {
                     engine->currFrame--;
                     piccolo_enginePushStack(engine, native->native(engine, argCount, engine->frames[engine->currFrame + 1].varStack));
                     break;
+                }
+                break;
+            }
+            case PICCOLO_OP_CLOSURE: {
+                piccolo_Value val = piccolo_enginePopStack(engine);
+                struct piccolo_ObjFunction* func = (struct piccolo_ObjFunction*)AS_OBJ(val);
+                int upvals = READ_PARAM();
+                struct piccolo_ObjClosure* closure = piccolo_newClosure(engine, func, upvals);
+                for(int i = 0; i < upvals; i++) {
+                    closure->upvals[i] = piccolo_newUpval(engine, engine->frames[engine->currFrame].varStack + READ_PARAM());
+                }
+                piccolo_enginePushStack(engine, OBJ_VAL(closure));
+                break;
+            }
+            case PICCOLO_OP_GET_UPVAL: {
+                int slot = READ_PARAM();
+                piccolo_enginePushStack(engine, PTR_VAL(engine->frames[engine->currFrame].closure->upvals[slot]->valPtr));
+                break;
+            }
+            case PICCOLO_OP_CLOSE_UPVALS: {
+                while(engine->openUpvals != NULL) {
+                    struct piccolo_ObjUpval* upval = engine->openUpvals;
+                    piccolo_Value* allocatedValue = reallocate(engine, NULL, 0, sizeof(piccolo_Value));
+                    *allocatedValue = *upval->valPtr;
+                    upval->valPtr = allocatedValue;
+                    upval->open = false;
+                    engine->openUpvals = upval->next;
                 }
                 break;
             }

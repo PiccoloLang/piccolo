@@ -6,12 +6,14 @@
 
 #include <stdarg.h>
 #include <stdbool.h>
+#include "object.h"
 
 struct piccolo_CallFrame {
     piccolo_Value varStack[256];
     int prevIp;
     int ip;
     struct piccolo_Bytecode* bytecode;
+    struct piccolo_ObjClosure* closure;
 };
 
 struct piccolo_Engine {
@@ -25,6 +27,8 @@ struct piccolo_Engine {
     bool hadError;
 
     void (*printError)(const char* format, va_list);
+
+    struct piccolo_ObjUpval* openUpvals;
 };
 
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list));

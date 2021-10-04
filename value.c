@@ -48,6 +48,8 @@ char* piccolo_getTypeName(piccolo_Value value) {
     if(IS_OBJ(value)) {
         enum piccolo_ObjType type = AS_OBJ(value)->type;
         if(type == PICCOLO_OBJ_FUNC)
+            return "raw fn";
+        if(type == PICCOLO_OBJ_CLOSURE)
             return "fn";
         if(type == PICCOLO_OBJ_NATIVE_FN)
             return "native fn";
