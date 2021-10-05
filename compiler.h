@@ -18,6 +18,7 @@ struct piccolo_Variable {
 
 struct piccolo_Upvalue {
     int slot;
+    bool local;
 };
 
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Variable, Variable)

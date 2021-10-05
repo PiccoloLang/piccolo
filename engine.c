@@ -236,7 +236,11 @@ static bool run(struct piccolo_Engine* engine) {
                 int upvals = READ_PARAM();
                 struct piccolo_ObjClosure* closure = piccolo_newClosure(engine, func, upvals);
                 for(int i = 0; i < upvals; i++) {
-                    closure->upvals[i] = piccolo_newUpval(engine, engine->frames[engine->currFrame].varStack + READ_PARAM());
+                    int slot = READ_PARAM();
+                    if(READ_BYTE())
+                        closure->upvals[i] = piccolo_newUpval(engine, engine->frames[engine->currFrame].varStack + slot);
+                    else
+                        closure->upvals[i] = engine->frames[engine->currFrame].closure->upvals[slot];
                 }
                 piccolo_enginePushStack(engine, OBJ_VAL(closure));
                 break;

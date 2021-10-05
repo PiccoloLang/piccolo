@@ -52,9 +52,9 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
             int upvals = getInstructionParam(bytecode, offset);
             printf("OP_CLOSURE [ ");
             for(int i = 0; i < upvals; i++)
-                printf("%d ", getInstructionParam(bytecode, offset + 2 + 2 * i));
+                printf("%d ", getInstructionParam(bytecode, offset + 2 + 3 * i));
             printf("]\n");
-            return offset + 3 + 2 * upvals;
+            return offset + 3 + 3 * upvals;
         }
         PARAM_INSTRUCTION(OP_GET_UPVAL)
         SIMPLE_INSTRUCTION(OP_CLOSE_UPVALS)

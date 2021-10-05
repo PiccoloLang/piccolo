@@ -71,17 +71,30 @@ static int resolveUpvalue(struct piccolo_Engine* engine, struct piccolo_Compiler
         return -1;
 
     int enclosingSlot = getVarSlot(&compiler->enclosing->locals, name);
-    if(enclosingSlot == -1)
-        return -1;
+    if(enclosingSlot == -1) {
+        int slot = resolveUpvalue(engine, compiler->enclosing, name);
+        if(slot == -1)
+            return -1;
+        for(int i = 0; i < compiler->upvals.count; i++)
+            if(compiler->upvals.values[i].slot == slot && !compiler->upvals.values[i].local)
+                return i;
+        int result = compiler->upvals.count;
+        struct piccolo_Upvalue upval;
+        upval.slot = slot;
+        upval.local = false;
+        piccolo_writeUpvalueArray(engine, &compiler->upvals, upval);
+        return result;
+    }
 
     for(int i = 0; i < compiler->upvals.count; i++)
-        if(compiler->upvals.values[i].slot == enclosingSlot)
+        if(compiler->upvals.values[i].slot == enclosingSlot && compiler->upvals.values[i].local)
             return i;
 
     int slot = compiler->upvals.count;
 
     struct piccolo_Upvalue upval;
     upval.slot = enclosingSlot;
+    upval.local = true;
     piccolo_writeUpvalueArray(engine, &compiler->upvals, upval);
 
     return slot;
@@ -194,7 +207,9 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
             int slot = functionCompiler.upvals.values[i].slot;
             piccolo_writeBytecode(engine, bytecode, (slot & 0xFF00) >> 8, charIdx);
             piccolo_writeBytecode(engine, bytecode, (slot & 0x00FF) >> 0, charIdx);
+            piccolo_writeBytecode(engine, bytecode, functionCompiler.upvals.values[i].local, charIdx);
         }
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
 
         freeCompiler(engine, &functionCompiler);
         return;
