@@ -22,7 +22,7 @@ static bool numeric(char c) {
 }
 
 static bool alpha(char c) {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-';
 }
 
 static bool alphanumeric(char c) {

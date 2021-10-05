@@ -7,7 +7,10 @@ PICCOLO_DYNARRAY_IMPL(piccolo_Value, Value)
 
 static void printObject(struct piccolo_Obj* obj) {
     if(obj->type == PICCOLO_OBJ_FUNC) {
-        printf("<fn %d>", ((struct piccolo_ObjFunction*)obj)->arity);
+        printf("<fn>");
+    }
+    if(obj->type == PICCOLO_OBJ_CLOSURE) {
+        printf("<fn>");
     }
 }
 
