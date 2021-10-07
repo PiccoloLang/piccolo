@@ -2,8 +2,8 @@
 #include "engine.h"
 
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "util/strutil.h"
 #include "object.h"
@@ -47,11 +47,22 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
                 evaporatePointer(&b);
-                if(!IS_NUM(a) || !IS_NUM(b)) {
-                    piccolo_runtimeError(engine, "Cannot add %s and %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
+                if(IS_NUM(a) && IS_NUM(b)) {
+                    piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) + AS_NUM(a)));
                     break;
                 }
-                piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) + AS_NUM(a)));
+                if(IS_OBJ(a) && IS_OBJ(b) && AS_OBJ(a)->type == PICCOLO_OBJ_STRING && AS_OBJ(b)->type == PICCOLO_OBJ_STRING) {
+                    struct piccolo_ObjString* bStr = (struct piccolo_ObjString*)AS_OBJ(a);
+                    struct piccolo_ObjString* aStr = (struct piccolo_ObjString*)AS_OBJ(b);
+                    char* result = reallocate(engine, NULL, 0, aStr->len + bStr->len + 1);
+                    memcpy(result, aStr->string, aStr->len);
+                    memcpy(result + aStr->len, bStr->string, bStr->len);
+                    result[aStr->len + bStr->len] = '\0';
+                    struct piccolo_ObjString* resultStr = piccolo_takeString(engine, result);
+                    piccolo_enginePushStack(engine, OBJ_VAL(resultStr));
+                    break;
+                }
+                piccolo_runtimeError(engine, "Cannot add %s and %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                 break;
             }
             case PICCOLO_OP_SUB: {
@@ -71,11 +82,30 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
                 evaporatePointer(&b);
-                if(!IS_NUM(a) || !IS_NUM(b)) {
-                    piccolo_runtimeError(engine, "Cannot multiply %s by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
+                if(IS_NUM(a) && IS_NUM(b)) {
+                    piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) * AS_NUM(a)));
                     break;
                 }
-                piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) * AS_NUM(a)));
+                if((IS_NUM(a) && IS_OBJ(b) && AS_OBJ(b)->type == PICCOLO_OBJ_STRING) ||
+                   (IS_NUM(b) && IS_OBJ(a) && AS_OBJ(a)->type == PICCOLO_OBJ_STRING)) {
+                    int repetitions;
+                    struct piccolo_ObjString* string;
+                    if(IS_NUM(a)) {
+                        repetitions = AS_NUM(a);
+                        string = (struct piccolo_ObjString*)AS_OBJ(b);
+                    } else {
+                        repetitions = AS_NUM(b);
+                        string = (struct piccolo_ObjString*)AS_OBJ(a);
+                    }
+                    char* result = reallocate(engine, NULL, 0, repetitions * string->len + 1);
+                    for(int i = 0; i < repetitions; i++)
+                        memcpy(result + i * string->len, string->string, string->len);
+                    result[repetitions * string->len] = '\0';
+                    struct piccolo_ObjString* resultStr = piccolo_takeString(engine, result);
+                    piccolo_enginePushStack(engine, OBJ_VAL(resultStr));
+                    break;
+                }
+                piccolo_runtimeError(engine, "Cannot multiply %s by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                 break;
             }
             case PICCOLO_OP_DIV: {
@@ -107,7 +137,20 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_enginePushStack(engine, BOOL_VAL(true));
                     break;
                 }
+                if(IS_OBJ(a) && IS_OBJ(b)) {
+                    struct piccolo_Obj* aObj = AS_OBJ(a);
+                    struct piccolo_Obj* bObj = AS_OBJ(b);
+                    if(aObj->type == PICCOLO_OBJ_STRING && bObj->type == PICCOLO_OBJ_STRING) {
+                        struct piccolo_ObjString* aStr = (struct piccolo_ObjString*)aObj;
+                        struct piccolo_ObjString* bStr = (struct piccolo_ObjString*)bObj;
+                        if(aStr->len == bStr->len && strncmp(aStr->string, bStr->string, aStr->len) == 0) {
+                            piccolo_enginePushStack(engine, BOOL_VAL(true));
+                            break;
+                        }
+                    }
+                }
                 piccolo_enginePushStack(engine, BOOL_VAL(false));
+                break;
             }
             case PICCOLO_OP_GREATER: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
@@ -178,6 +221,7 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_JUMP_FALSE: {
                 int jumpDist = READ_PARAM();
                 piccolo_Value condition = piccolo_enginePopStack(engine);
+                evaporatePointer(&condition);
                 if(!IS_BOOL(condition)) {
                     piccolo_runtimeError(engine, "Condition must be a boolean.");
                     break;

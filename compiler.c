@@ -113,6 +113,11 @@ static void compileLiteral(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
         return;
     }
+    if(compiler->current.type == PICCOLO_TOKEN_STRING) {
+        piccolo_writeConst(engine, bytecode, OBJ_VAL(piccolo_copyString(engine, compiler->current.start + 1, compiler->current.length - 2)), compiler->current.charIdx);
+        advanceCompiler(engine, compiler);
+        return;
+    }
     if(compiler->current.type == PICCOLO_TOKEN_NIL) {
         piccolo_writeConst(engine, bytecode, NIL_VAL(), compiler->current.charIdx);
         advanceCompiler(engine, compiler);

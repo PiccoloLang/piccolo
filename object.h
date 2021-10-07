@@ -6,6 +6,7 @@
 #include "engine.h"
 
 enum piccolo_ObjType {
+    PICCOLO_OBJ_STRING,
     PICCOLO_OBJ_FUNC,
     PICCOLO_OBJ_UPVAL,
     PICCOLO_OBJ_CLOSURE,
@@ -14,6 +15,12 @@ enum piccolo_ObjType {
 
 struct piccolo_Obj {
     enum piccolo_ObjType type;
+};
+
+struct piccolo_ObjString {
+    struct piccolo_Obj obj;
+    const char* string;
+    int len;
 };
 
 struct piccolo_ObjFunction {
@@ -40,6 +47,8 @@ struct piccolo_ObjNativeFn {
     piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args);
 };
 
+struct piccolo_ObjString* piccolo_takeString(struct piccolo_Engine* engine, const char* string);
+struct piccolo_ObjString* piccolo_copyString(struct piccolo_Engine* engine, const char* string, int len);
 struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine);
 struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo_Value* ptr);
 struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, struct piccolo_ObjFunction* function, int upvals);
