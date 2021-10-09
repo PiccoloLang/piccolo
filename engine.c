@@ -195,7 +195,9 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_GET_IDX: {
                 piccolo_Value idx = piccolo_enginePopStack(engine);
+                evaporatePointer(&idx);
                 piccolo_Value container = piccolo_enginePopStack(engine);
+                evaporatePointer(&container);
                 if(!IS_OBJ(container)) {
                     piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
                 } else {
@@ -212,7 +214,7 @@ static bool run(struct piccolo_Engine* engine) {
                                 piccolo_runtimeError(engine, "Array index out of bounds.");
                                 break;
                             }
-                            piccolo_enginePushStack(engine, array->array.values[idxNum]);
+                            piccolo_enginePushStack(engine, PTR_VAL(array->array.values + idxNum));
                             break;
                         }
                         default:
