@@ -271,6 +271,59 @@ static void compileFnCall(COMPILE_PARAMETERS) {
     }
 }
 
+static void compileArray(COMPILE_PARAMETERS) {
+    if(compiler->current.type == PICCOLO_TOKEN_LEFT_SQR_PAREN) {
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        int elementCount = 0;
+        while(compiler->current.type != PICCOLO_TOKEN_RIGHT_SQR_PAREN) {
+            compileFnCall(COMPILE_ARGUMENTS_REQ_VAL);
+            elementCount++;
+            if(compiler->current.type == PICCOLO_TOKEN_EOF) {
+                compilationError(engine, compiler, "Expected comma.");
+                break;
+            }
+            if(compiler->current.type != PICCOLO_TOKEN_COMMA && compiler->current.type != PICCOLO_TOKEN_RIGHT_SQR_PAREN) {
+                compilationError(engine, compiler, "Expected comma.");
+                advanceCompiler(engine, compiler);
+            } else if(compiler->current.type == PICCOLO_TOKEN_COMMA) {
+                advanceCompiler(engine, compiler);
+            }
+        }
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, elementCount, charIdx);
+        advanceCompiler(engine, compiler);
+        return;
+    }
+    compileFnCall(COMPILE_ARGUMENTS);
+}
+
+static void compileIndexing(COMPILE_PARAMETERS) {
+    compileArray(COMPILE_ARGUMENTS);
+    while(compiler->current.type == PICCOLO_TOKEN_LEFT_SQR_PAREN) {
+        struct piccolo_Scanner scannerCopy = *compiler->scanner;
+        struct piccolo_Token startTokenCopy = compiler->current;
+        advanceCompiler(engine, compiler);
+        int charIdx = compiler->current.charIdx;
+        int startBytecodeCount = bytecode->code.count;
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+        if(compiler->current.type == PICCOLO_TOKEN_RIGHT_SQR_PAREN) {
+            advanceCompiler(engine, compiler);
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_IDX, charIdx);
+        } else if(compiler->current.type == PICCOLO_TOKEN_COMMA) {
+            // This cursed code that breaks the "single pass"-ness of the compiler is needed for cases like
+            // var x = [0, 1, 2, 3, 4][0]
+            // [1, 2, 3]
+            *compiler->scanner = scannerCopy;
+            compiler->current = startTokenCopy;
+            bytecode->code.count = startBytecodeCount;
+            bytecode->charIdxs.count = startBytecodeCount;
+            return;
+        } else {
+            compilationError(engine, compiler, "Expected ].");
+        }
+    }
+}
+
 static void compileUnary(COMPILE_PARAMETERS) {
     while(compiler->current.type == PICCOLO_TOKEN_MINUS || compiler->current.type == PICCOLO_TOKEN_BANG) {
         enum piccolo_TokenType op = compiler->current.type;
@@ -278,14 +331,14 @@ static void compileUnary(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
         if(op == PICCOLO_TOKEN_MINUS)
             piccolo_writeConst(engine, bytecode, NUM_VAL(0), charIdx);
-        compileFnCall(COMPILE_ARGUMENTS_REQ_VAL);
+        compileIndexing(COMPILE_ARGUMENTS_REQ_VAL);
         if(op == PICCOLO_TOKEN_MINUS)
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SUB, charIdx);
         if(op == PICCOLO_TOKEN_BANG)
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_NOT, charIdx);
         return;
     }
-    compileFnCall(COMPILE_ARGUMENTS);
+    compileIndexing(COMPILE_ARGUMENTS);
 }
 
 static void compileMultiplicative(COMPILE_PARAMETERS) {

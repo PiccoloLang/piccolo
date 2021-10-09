@@ -185,6 +185,42 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) > AS_NUM(b)));
                 break;
             }
+            case PICCOLO_OP_CREATE_ARRAY: {
+                int len = READ_PARAM();
+                struct piccolo_ObjArray* array = piccolo_newArray(engine, len);
+                for(int i = len - 1; i >= 0; i--)
+                    array->array.values[i] = piccolo_enginePopStack(engine);
+                piccolo_enginePushStack(engine, OBJ_VAL(array));
+                break;
+            }
+            case PICCOLO_OP_GET_IDX: {
+                piccolo_Value idx = piccolo_enginePopStack(engine);
+                piccolo_Value container = piccolo_enginePopStack(engine);
+                if(!IS_OBJ(container)) {
+                    piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
+                } else {
+                    struct piccolo_Obj* containerObj = AS_OBJ(container);
+                    switch(containerObj->type) {
+                        case PICCOLO_OBJ_ARRAY: {
+                            struct piccolo_ObjArray* array = (struct piccolo_ObjArray*)containerObj;
+                            if(!IS_NUM(idx)) {
+                                piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
+                                break;
+                            }
+                            int idxNum = AS_NUM(idx);
+                            if(idxNum < 0 || idxNum >= array->array.count) {
+                                piccolo_runtimeError(engine, "Array index out of bounds.");
+                                break;
+                            }
+                            piccolo_enginePushStack(engine, array->array.values[idxNum]);
+                            break;
+                        }
+                        default:
+                            piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
+                    }
+                }
+                break;
+            }
             case PICCOLO_OP_POP_STACK: {
                 piccolo_enginePopStack(engine);
                 break;

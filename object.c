@@ -29,6 +29,14 @@ struct piccolo_ObjString* piccolo_copyString(struct piccolo_Engine* engine, cons
     return newString(engine, copy, len);
 }
 
+struct piccolo_ObjArray* piccolo_newArray(struct piccolo_Engine* engine, int len) {
+    struct piccolo_ObjArray* array = ALLOCATE_OBJ(engine, struct piccolo_ObjArray, PICCOLO_OBJ_ARRAY);
+    piccolo_initValueArray(&array->array);
+    for(int i = 0; i < len; i++)
+        piccolo_writeValueArray(engine, &array->array, NIL_VAL());
+    return array;
+}
+
 struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine) {
     struct piccolo_ObjFunction* function = ALLOCATE_OBJ(engine, struct piccolo_ObjFunction, PICCOLO_OBJ_FUNC);
     piccolo_initBytecode(&function->bytecode);
