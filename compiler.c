@@ -277,7 +277,7 @@ static void compileArray(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
         int elementCount = 0;
         while(compiler->current.type != PICCOLO_TOKEN_RIGHT_SQR_PAREN) {
-            compileFnCall(COMPILE_ARGUMENTS_REQ_VAL);
+            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
             elementCount++;
             if(compiler->current.type == PICCOLO_TOKEN_EOF) {
                 compilationError(engine, compiler, "Expected comma.");
