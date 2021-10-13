@@ -14,6 +14,7 @@ struct piccolo_Variable {
     int slot;
     char* name;
     size_t nameLen;
+    bool nameInSource;
 };
 
 struct piccolo_Upvalue {

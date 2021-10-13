@@ -4,7 +4,7 @@
 #include <string.h>
 
 static struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjType type, size_t size) {
-    struct piccolo_Obj* obj = reallocate(engine, NULL, 0, size);
+    struct piccolo_Obj* obj = PICCOLO_REALLOCATE("obj", engine, NULL, 0, size);
     obj->type = type;
     return obj;
 }
@@ -23,7 +23,7 @@ struct piccolo_ObjString* piccolo_takeString(struct piccolo_Engine* engine, cons
 }
 
 struct piccolo_ObjString* piccolo_copyString(struct piccolo_Engine* engine, const char* string, int len) {
-    char* copy = reallocate(engine, NULL, 0, len + 1);
+    char* copy = PICCOLO_REALLOCATE("string copy", engine, NULL, 0, len + 1);
     memcpy(copy, string, len);
     copy[len] = '\0';
     return newString(engine, copy, len);
@@ -56,7 +56,7 @@ struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo
 struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, struct piccolo_ObjFunction* function, int upvals) {
     struct piccolo_ObjClosure* closure = ALLOCATE_OBJ(engine, struct piccolo_ObjClosure, PICCOLO_OBJ_CLOSURE);
     closure->prototype = function;
-    closure->upvals = reallocate(engine, NULL, 0, sizeof(struct piccolo_ObjUpval*) * upvals);
+    closure->upvals = PICCOLO_REALLOCATE("upval array", engine, NULL, 0, sizeof(struct piccolo_ObjUpval*) * upvals);
     return closure;
 }
 

@@ -29,6 +29,9 @@ struct piccolo_Engine {
     void (*printError)(const char* format, va_list);
 
     struct piccolo_ObjUpval* openUpvals;
+#ifdef PICCOLO_ENABLE_MEMORY_TRACKER
+    struct piccolo_MemoryTrack* track;
+#endif
 };
 
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list));

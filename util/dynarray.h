@@ -9,9 +9,9 @@ struct piccolo_Engine;
 #define PICCOLO_ARRAY_NAME(typename) piccolo_ ## typename ## Array
 #define PICCOLO_GROW_CAPACITY(oldCapacity) ((oldCapacity < 8) ? 8 : 2 * oldCapacity)
 #define PICCOLO_GROW_ARRAY(engine, type, pointer, oldCount, newCount) \
-    ((type*)reallocate(engine, pointer, sizeof(type) * oldCount, sizeof(type) * newCount))
+    ((type*)PICCOLO_REALLOCATE("array grow", engine, pointer, sizeof(type) * oldCount, sizeof(type) * newCount))
 #define PICCOLO_FREE_ARRAY(engine, type, pointer, oldCount) \
-    ((type*)reallocate(engine, pointer, sizeof(type)* oldCount, 0))
+    ((type*)PICCOLO_REALLOCATE("array free", engine, pointer, sizeof(type)* oldCount, 0))
 
 #define PICCOLO_DYNARRAY_HEADER(type, typename)                                                 \
     struct PICCOLO_ARRAY_NAME(typename) {                                                       \

@@ -11,19 +11,18 @@ piccolo_Value piccolo_getGlobalWithNameSize(struct piccolo_Engine* engine, struc
     return NIL_VAL();
 }
 
-
 piccolo_Value piccolo_getGlobal(struct piccolo_Engine* engine, struct piccolo_Package* package, const char* name) {
     return piccolo_getGlobalWithNameSize(engine, package, name, strlen(name));
 }
 
-
 void piccolo_defineGlobalWithNameSize(struct piccolo_Engine* engine, struct piccolo_Package* package, const char* name, size_t nameLen, struct piccolo_Value value) {
     struct piccolo_Variable global;
-    global.name = reallocate(engine, NULL, 0, nameLen + 1);
+    global.name = PICCOLO_REALLOCATE("global varname", engine, NULL, 0, nameLen + 1);
     global.name[nameLen] = '\0';
     strcpy(global.name, name);
     global.nameLen = nameLen;
     global.slot = package->globals.count;
+    global.nameInSource = false;
     piccolo_writeVariableArray(engine, &package->globalVars, global);
     piccolo_writeValueArray(engine, &package->globals, value);
 }

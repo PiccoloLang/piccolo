@@ -186,6 +186,7 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
                 parameter.name = parameterName.start;
                 parameter.nameLen = parameterName.length;
                 parameter.slot = functionCompiler.locals.count;
+                parameter.nameInSource = true;
                 piccolo_writeVariableArray(engine, &functionCompiler.locals, parameter);
                 function->arity++;
             }
@@ -483,12 +484,14 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
             variable.slot = slot;
             variable.name = varName.start;
             variable.nameLen = varName.length;
+            variable.nameInSource = true;
             piccolo_writeVariableArray(engine, compiler->globals, variable);
         } else {
             struct piccolo_Variable variable;
             variable.slot = slot;
             variable.name = varName.start;
             variable.nameLen = varName.length;
+            variable.nameInSource = true;
             piccolo_writeVariableArray(engine, &compiler->locals, variable);
         }
 

@@ -12,6 +12,9 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     engine->printError = printError;
     engine->stackTop = engine->stack;
     engine->openUpvals = NULL;
+#ifdef PICCOLO_ENABLE_MEMORY_TRACKER
+    engine->track = NULL;
+#endif
 }
 
 void piccolo_freeEngine(struct piccolo_Engine* engine) {
@@ -54,7 +57,7 @@ static bool run(struct piccolo_Engine* engine) {
                 if(IS_OBJ(a) && IS_OBJ(b) && AS_OBJ(a)->type == PICCOLO_OBJ_STRING && AS_OBJ(b)->type == PICCOLO_OBJ_STRING) {
                     struct piccolo_ObjString* bStr = (struct piccolo_ObjString*)AS_OBJ(a);
                     struct piccolo_ObjString* aStr = (struct piccolo_ObjString*)AS_OBJ(b);
-                    char* result = reallocate(engine, NULL, 0, aStr->len + bStr->len + 1);
+                    char* result = PICCOLO_REALLOCATE("string concat", engine, NULL, 0, aStr->len + bStr->len + 1);
                     memcpy(result, aStr->string, aStr->len);
                     memcpy(result + aStr->len, bStr->string, bStr->len);
                     result[aStr->len + bStr->len] = '\0';
@@ -97,7 +100,7 @@ static bool run(struct piccolo_Engine* engine) {
                         repetitions = AS_NUM(b);
                         string = (struct piccolo_ObjString*)AS_OBJ(a);
                     }
-                    char* result = reallocate(engine, NULL, 0, repetitions * string->len + 1);
+                    char* result = PICCOLO_REALLOCATE("string multiplication", engine, NULL, 0, repetitions * string->len + 1);
                     for(int i = 0; i < repetitions; i++)
                         memcpy(result + i * string->len, string->string, string->len);
                     result[repetitions * string->len] = '\0';
@@ -335,7 +338,7 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_CLOSE_UPVALS: {
                 while(engine->openUpvals != NULL) {
                     struct piccolo_ObjUpval* upval = engine->openUpvals;
-                    piccolo_Value* allocatedValue = reallocate(engine, NULL, 0, sizeof(piccolo_Value));
+                    piccolo_Value* allocatedValue = PICCOLO_REALLOCATE("heap upval", engine, NULL, 0, sizeof(piccolo_Value));
                     *allocatedValue = *upval->valPtr;
                     upval->valPtr = allocatedValue;
                     upval->open = false;

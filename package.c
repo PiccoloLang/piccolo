@@ -8,6 +8,7 @@
 #include "util/file.h"
 #include "object.h"
 #include "time.h"
+#include "util/memory.h"
 
 // TODO: decouple this
 #include "embedding.h"
@@ -48,6 +49,10 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
         piccolo_enginePrintError(engine, "Compilation error.\n");
         return package;
     }
+
+    for(int i = 0; i < package->globalVars.count; i++)
+        if(!package->globalVars.values[i].nameInSource)
+            PICCOLO_REALLOCATE("var name free", engine, package->globalVars.values[i].name, package->globalVars.values[i].nameLen + 1, 0);
 
     if(!piccolo_executePackage(engine, package)) {
         piccolo_enginePrintError(engine, "Runtime error.\n");
