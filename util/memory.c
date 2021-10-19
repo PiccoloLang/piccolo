@@ -4,11 +4,11 @@
 #include <stdlib.h>
 
 void* piccolo_reallocate(struct piccolo_Engine* engine, void* data, size_t oldSize, size_t newSize) {
+    engine->liveMemory += newSize - oldSize;
     if(newSize == 0) {
         free(data);
         return NULL;
     }
-
     return realloc(data, newSize);
 }
 
@@ -28,15 +28,16 @@ void* piccolo_reallocateTrack(const char* name, struct piccolo_Engine* engine, v
         track = malloc(sizeof(struct piccolo_MemoryTrack));
         track->next = engine->track;
         engine->track = track;
+        track->name = name;
     }
     void* newPtr = piccolo_reallocate(engine, data, oldSize, newSize);
     track->ptr = newPtr;
-    track->name = name;
     track->size = newSize;
     return newPtr;
 }
 
 void piccolo_printMemAllocs(struct piccolo_Engine* engine) {
+    printf("live memory: %lu\n", engine->liveMemory);
     struct piccolo_MemoryTrack* track = engine->track;
     while(track != NULL) {
         if(track->size > 0) {

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "util/strutil.h"
 #include "object.h"
@@ -12,6 +13,8 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     engine->printError = printError;
     engine->stackTop = engine->stack;
     engine->openUpvals = NULL;
+    engine->liveMemory = 0;
+    engine->objs = NULL;
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     engine->track = NULL;
 #endif
@@ -19,6 +22,12 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
 
 void piccolo_freeEngine(struct piccolo_Engine* engine) {
     piccolo_freePackage(engine, &engine->package);
+    struct piccolo_Obj* curr = engine->objs;
+    while(curr != NULL) {
+        struct piccolo_Obj* toFree = curr;
+        curr = curr->next;
+        piccolo_freeObj(engine, toFree);
+    }
 }
 
 static void evaporatePointer(piccolo_Value* value) {
@@ -416,3 +425,16 @@ void piccolo_runtimeError(struct piccolo_Engine* engine, const char* format, ...
 
     engine->hadError = true;
 }
+
+#ifdef PICCOLO_ENABLE_MEMORY_TRACKER
+
+void piccolo_freeMemTracks(struct piccolo_Engine* engine) {
+    struct piccolo_MemoryTrack* track = engine->track;
+    while(track != NULL) {
+        struct piccolo_MemoryTrack* toFree = track;
+        track = track->next;
+        free(toFree);
+    }
+}
+
+#endif

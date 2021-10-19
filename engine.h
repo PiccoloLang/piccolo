@@ -26,6 +26,9 @@ struct piccolo_Engine {
     int currFrame;
     bool hadError;
 
+    size_t liveMemory;
+    struct piccolo_Obj* objs;
+
     void (*printError)(const char* format, va_list);
 
     struct piccolo_ObjUpval* openUpvals;
@@ -47,5 +50,9 @@ piccolo_Value piccolo_enginePopStack(struct piccolo_Engine* engine);
 piccolo_Value piccolo_enginePeekStack(struct piccolo_Engine* engine);
 
 void piccolo_runtimeError(struct piccolo_Engine* engine, const char* format, ...);
+
+#ifdef PICCOLO_ENABLE_MEMORY_TRACKER
+void piccolo_freeMemTracks(struct piccolo_Engine* engine);
+#endif
 
 #endif

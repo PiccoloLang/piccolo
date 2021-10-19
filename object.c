@@ -5,11 +5,52 @@
 
 static struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjType type, size_t size) {
     struct piccolo_Obj* obj = PICCOLO_REALLOCATE("obj", engine, NULL, 0, size);
+    obj->next = engine->objs;
+    engine->objs = obj;
     obj->type = type;
     return obj;
 }
 
 #define ALLOCATE_OBJ(engine, type, objType) ((type*)allocateObj(engine, objType, sizeof(type)))
+
+void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj) {
+    size_t objSize = 10;
+    switch(obj->type) {
+        case PICCOLO_OBJ_STRING: {
+            objSize = sizeof(struct piccolo_ObjString);
+            PICCOLO_REALLOCATE("free string", engine, ((struct piccolo_ObjString*)obj)->string, ((struct piccolo_ObjString*)obj)->len + 1, 0);
+            break;
+        }
+        case PICCOLO_OBJ_ARRAY: {
+            objSize = sizeof(struct piccolo_ObjArray);
+            piccolo_freeValueArray(engine, &((struct piccolo_ObjArray*)obj)->array);
+            break;
+        }
+        case PICCOLO_OBJ_FUNC: {
+            objSize = sizeof(struct piccolo_ObjFunction);
+            struct piccolo_ObjFunction* func = (struct piccolo_ObjFunction*)obj;
+            piccolo_freeBytecode(engine, &func->bytecode);
+            break;
+        }
+        case PICCOLO_OBJ_UPVAL: {
+            objSize = sizeof(struct piccolo_ObjUpval);
+            if(!((struct piccolo_ObjUpval*)obj)->open)
+                PICCOLO_REALLOCATE("free heap upval", engine, ((struct piccolo_ObjUpval*)obj)->valPtr, sizeof(struct piccolo_Value), 0);
+            break;
+        }
+        case PICCOLO_OBJ_CLOSURE: {
+            objSize = sizeof(struct piccolo_ObjClosure);
+            struct piccolo_ObjClosure* closure = (struct piccolo_ObjClosure*)obj;
+            PICCOLO_REALLOCATE("free upval array", engine, closure->upvals, sizeof(struct piccolo_ObjUpval*) * closure->upvalCnt, 0);
+            break;
+        }
+        case PICCOLO_OBJ_NATIVE_FN: {
+            objSize = sizeof(struct piccolo_ObjNativeFn);
+            break;
+        }
+    }
+    PICCOLO_REALLOCATE("free obj", engine, obj, objSize, 0);
+}
 
 static struct piccolo_ObjString* newString(struct piccolo_Engine* engine, const char* string, int len) {
     struct piccolo_ObjString* result = ALLOCATE_OBJ(engine, struct piccolo_ObjString, PICCOLO_OBJ_STRING);
@@ -57,6 +98,7 @@ struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, str
     struct piccolo_ObjClosure* closure = ALLOCATE_OBJ(engine, struct piccolo_ObjClosure, PICCOLO_OBJ_CLOSURE);
     closure->prototype = function;
     closure->upvals = PICCOLO_REALLOCATE("upval array", engine, NULL, 0, sizeof(struct piccolo_ObjUpval*) * upvals);
+    closure->upvalCnt = upvals;
     return closure;
 }
 

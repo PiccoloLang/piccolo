@@ -16,6 +16,7 @@ enum piccolo_ObjType {
 
 struct piccolo_Obj {
     enum piccolo_ObjType type;
+    struct piccolo_Obj* next;
 };
 
 struct piccolo_ObjString {
@@ -45,6 +46,7 @@ struct piccolo_ObjUpval {
 struct piccolo_ObjClosure {
     struct piccolo_Obj obj;
     struct piccolo_ObjUpval** upvals;
+    int upvalCnt;
     struct piccolo_ObjFunction* prototype;
 };
 
@@ -52,6 +54,8 @@ struct piccolo_ObjNativeFn {
     struct piccolo_Obj obj;
     piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args);
 };
+
+void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj);
 
 struct piccolo_ObjString* piccolo_takeString(struct piccolo_Engine* engine, const char* string);
 struct piccolo_ObjString* piccolo_copyString(struct piccolo_Engine* engine, const char* string, int len);

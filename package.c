@@ -50,10 +50,6 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
         return package;
     }
 
-    for(int i = 0; i < package->globalVars.count; i++)
-        if(!package->globalVars.values[i].nameInSource)
-            PICCOLO_REALLOCATE("var name free", engine, package->globalVars.values[i].name, package->globalVars.values[i].nameLen + 1, 0);
-
     if(!piccolo_executePackage(engine, package)) {
         piccolo_enginePrintError(engine, "Runtime error.\n");
         return package;
@@ -63,6 +59,9 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
 
 void piccolo_freePackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     piccolo_freeValueArray(engine, &package->globals);
+    for(int i = 0; i < package->globalVars.count; i++)
+        if(!package->globalVars.values[i].nameInSource)
+            PICCOLO_REALLOCATE("var name free", engine, package->globalVars.values[i].name, package->globalVars.values[i].nameLen + 1, 0);
     piccolo_freeVariableArray(engine, &package->globalVars);
     piccolo_freeBytecode(engine, &package->bytecode);
     free(package->source);
