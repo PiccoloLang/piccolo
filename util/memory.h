@@ -6,7 +6,7 @@
 
 struct piccolo_Engine;
 
-#define PICCOLO_ENABLE_MEMORY_TRACKER
+//#define PICCOLO_ENABLE_MEMORY_TRACKER
 
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
 

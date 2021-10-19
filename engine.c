@@ -8,6 +8,7 @@
 
 #include "util/strutil.h"
 #include "object.h"
+#include "gc.h"
 
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list)) {
     engine->printError = printError;
@@ -360,6 +361,8 @@ static bool run(struct piccolo_Engine* engine) {
                 break;
             }
         }
+
+        piccolo_collectGarbage(engine);
 
         if(engine->hadError) {
             return false;
