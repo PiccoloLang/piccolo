@@ -48,6 +48,7 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
 
         PARAM_INSTRUCTION(OP_JUMP)
         PARAM_INSTRUCTION(OP_JUMP_FALSE)
+        PARAM_INSTRUCTION(OP_REV_JUMP)
 
         PARAM_INSTRUCTION(OP_CALL)
 

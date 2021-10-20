@@ -25,6 +25,7 @@ typedef enum {
 
     PICCOLO_OP_JUMP,
     PICCOLO_OP_JUMP_FALSE,
+    PICCOLO_OP_REV_JUMP,
 
     PICCOLO_OP_CALL,
 

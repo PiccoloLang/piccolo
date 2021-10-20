@@ -534,6 +534,33 @@ static void compileIf(COMPILE_PARAMETERS) {
     compileVarDecl(COMPILE_ARGUMENTS);
 }
 
+static void compileWhile(COMPILE_PARAMETERS) {
+    if(compiler->current.type == PICCOLO_TOKEN_WHILE) {
+        advanceCompiler(engine, compiler);
+        int charIdx = compiler->current.charIdx;
+        if(requireValue) {
+            compilationError(engine, compiler, "While with req val is not implemented");
+            return;
+        }
+
+        int whileStartAddr = bytecode->code.count;
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+        int fwdJumpAddr = bytecode->code.count;
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP_FALSE, 0, charIdx);
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+        int revJumpAddr = bytecode->code.count;
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_REV_JUMP, 0, charIdx);
+        int whileEndAddr = bytecode->code.count;
+
+        piccolo_patchParam(bytecode, fwdJumpAddr, whileEndAddr - fwdJumpAddr);
+        piccolo_patchParam(bytecode, revJumpAddr, revJumpAddr - whileStartAddr);
+
+        return;
+    }
+    compileIf(COMPILE_ARGUMENTS);
+}
+
 static void compileBlock(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_LEFT_BRACE) {
         int localsBefore = compiler->locals.count;
@@ -543,7 +570,7 @@ static void compileBlock(COMPILE_PARAMETERS) {
                 compilationError(engine, compiler, "Expected }.");
                 break;
             }
-            compileVarDecl(engine, compiler, bytecode, false, false);
+            compileWhile(engine, compiler, bytecode, false, false);
         }
         advanceCompiler(engine, compiler);
         int charIdx = compiler->current.charIdx;
@@ -553,7 +580,7 @@ static void compileBlock(COMPILE_PARAMETERS) {
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
         return;
     }
-    compileIf(COMPILE_ARGUMENTS);
+    compileWhile(COMPILE_ARGUMENTS);
 }
 
 static void compileExpr(COMPILE_PARAMETERS) {

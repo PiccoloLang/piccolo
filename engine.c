@@ -282,6 +282,11 @@ static bool run(struct piccolo_Engine* engine) {
                 }
                 break;
             }
+            case PICCOLO_OP_REV_JUMP: {
+                int jumpDist = READ_PARAM();
+                engine->frames[engine->currFrame].ip -= jumpDist + 3;
+                break;
+            }
             case PICCOLO_OP_CALL: {
                 int argCount = READ_PARAM();
                 engine->currFrame++;
