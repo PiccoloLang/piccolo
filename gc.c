@@ -50,8 +50,8 @@ static void markPackage(struct piccolo_Package* package) {
 static void markRoots(struct piccolo_Engine* engine) {
     for(piccolo_Value* iter = engine->stack; iter != engine->stackTop; iter++)
         markValue(*iter);
-    for(int i = 0; i < engine->currFrame; i++) {
-        for(int j = 0; j < sizeof(engine->frames[i].varStack) / sizeof(piccolo_Value); j++)
+    for(int i = 0; i <= engine->currFrame; i++) {
+        for(int j = 0; j < 256; j++)
             markValue(engine->frames[i].varStack[j]);
         markObj(engine->frames[i].closure);
     }
@@ -68,10 +68,12 @@ void piccolo_collectGarbage(struct piccolo_Engine* engine) {
 
     struct piccolo_Obj* newObjs = NULL;
     currObj = engine->objs;
+    int liveObjs = 0;
     while(currObj != NULL) {
         struct piccolo_Obj* curr = currObj;
         currObj = currObj->next;
         if(curr->marked) {
+            liveObjs++;
             curr->next = newObjs;
             newObjs = curr;
         } else {
@@ -79,5 +81,4 @@ void piccolo_collectGarbage(struct piccolo_Engine* engine) {
         }
     }
     engine->objs = newObjs;
-
 }

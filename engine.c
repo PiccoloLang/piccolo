@@ -381,7 +381,6 @@ static bool run(struct piccolo_Engine* engine) {
         }
 
         piccolo_collectGarbage(engine);
-
         if(engine->hadError) {
             return false;
         }
