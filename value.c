@@ -29,41 +29,41 @@ static void printObject(struct piccolo_Obj* obj) {
 }
 
 void piccolo_printValue(piccolo_Value value) {
-    if(IS_NIL(value)) {
+    if(PICCOLO_IS_NIL(value)) {
         printf("nil");
         return;
     }
-    if(IS_NUM(value)) {
-        printf("%f", AS_NUM(value));
+    if(PICCOLO_IS_NUM(value)) {
+        printf("%f", PICCOLO_AS_NUM(value));
         return;
     }
-    if(IS_BOOL(value)) {
-        printf(AS_BOOL(value) ? "true" : "false");
+    if(PICCOLO_IS_BOOL(value)) {
+        printf(PICCOLO_AS_BOOL(value) ? "true" : "false");
         return;
     }
-    if(IS_PTR(value)) {
+    if(PICCOLO_IS_PTR(value)) {
         printf("<ptr>");
     }
-    if(IS_OBJ(value)) {
-        printObject(AS_OBJ(value));
+    if(PICCOLO_IS_OBJ(value)) {
+        printObject(PICCOLO_AS_OBJ(value));
     }
 }
 
 char* piccolo_getTypeName(piccolo_Value value) {
-    if(IS_NIL(value)) {
+    if(PICCOLO_IS_NIL(value)) {
         return "nil";
     }
-    if(IS_NUM(value)) {
+    if(PICCOLO_IS_NUM(value)) {
         return "number";
     }
-    if(IS_BOOL(value)) {
+    if(PICCOLO_IS_BOOL(value)) {
         return "bool";
     }
-    if(IS_PTR(value)) {
+    if(PICCOLO_IS_PTR(value)) {
         return "ptr";
     }
-    if(IS_OBJ(value)) {
-        enum piccolo_ObjType type = AS_OBJ(value)->type;
+    if(PICCOLO_IS_OBJ(value)) {
+        enum piccolo_ObjType type = PICCOLO_AS_OBJ(value)->type;
         if(type == PICCOLO_OBJ_STRING)
             return "string";
         if(type == PICCOLO_OBJ_ARRAY)

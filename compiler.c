@@ -109,27 +109,27 @@ static void compileExpr(COMPILE_PARAMETERS);
 
 static void compileLiteral(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_NUM) {
-        piccolo_writeConst(engine, bytecode, NUM_VAL(strtod(compiler->current.start, NULL)), compiler->current.charIdx);
+        piccolo_writeConst(engine, bytecode, PICCOLO_NUM_VAL(strtod(compiler->current.start, NULL)), compiler->current.charIdx);
         advanceCompiler(engine, compiler);
         return;
     }
     if(compiler->current.type == PICCOLO_TOKEN_STRING) {
-        piccolo_writeConst(engine, bytecode, OBJ_VAL(piccolo_copyString(engine, compiler->current.start + 1, compiler->current.length - 2)), compiler->current.charIdx);
+        piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(piccolo_copyString(engine, compiler->current.start + 1, compiler->current.length - 2)), compiler->current.charIdx);
         advanceCompiler(engine, compiler);
         return;
     }
     if(compiler->current.type == PICCOLO_TOKEN_NIL) {
-        piccolo_writeConst(engine, bytecode, NIL_VAL(), compiler->current.charIdx);
+        piccolo_writeConst(engine, bytecode, PICCOLO_NIL_VAL(), compiler->current.charIdx);
         advanceCompiler(engine, compiler);
         return;
     }
     if(compiler->current.type == PICCOLO_TOKEN_FALSE) {
-        piccolo_writeConst(engine, bytecode, BOOL_VAL(false), compiler->current.charIdx);
+        piccolo_writeConst(engine, bytecode, PICCOLO_BOOL_VAL(false), compiler->current.charIdx);
         advanceCompiler(engine, compiler);
         return;
     }
     if(compiler->current.type == PICCOLO_TOKEN_TRUE) {
-        piccolo_writeConst(engine, bytecode, BOOL_VAL(true), compiler->current.charIdx);
+        piccolo_writeConst(engine, bytecode, PICCOLO_BOOL_VAL(true), compiler->current.charIdx);
         advanceCompiler(engine, compiler);
         return;
     }
@@ -207,7 +207,7 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
 
         compiler->current = functionCompiler.current;
 
-        piccolo_writeConst(engine, bytecode, OBJ_VAL(function), charIdx);
+        piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(function), charIdx);
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CLOSURE, functionCompiler.upvals.count, charIdx);
         for(int i = 0; i < functionCompiler.upvals.count; i++) {
             int slot = functionCompiler.upvals.values[i].slot;
@@ -331,7 +331,7 @@ static void compileUnary(COMPILE_PARAMETERS) {
         int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
         if(op == PICCOLO_TOKEN_MINUS)
-            piccolo_writeConst(engine, bytecode, NUM_VAL(0), charIdx);
+            piccolo_writeConst(engine, bytecode, PICCOLO_NUM_VAL(0), charIdx);
         compileIndexing(COMPILE_ARGUMENTS_REQ_VAL);
         if(op == PICCOLO_TOKEN_MINUS)
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SUB, charIdx);
@@ -418,7 +418,7 @@ static void compileBoolOperations(COMPILE_PARAMETERS) {
         int skipValueJumpAddr = bytecode->code.count;
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP, 0, charIdx);
         int valueAddr = bytecode->code.count;
-        piccolo_writeConst(engine, bytecode, BOOL_VAL(op == PICCOLO_TOKEN_OR), charIdx);
+        piccolo_writeConst(engine, bytecode, PICCOLO_BOOL_VAL(op == PICCOLO_TOKEN_OR), charIdx);
         int endAddr = bytecode->code.count;
 
         piccolo_patchParam(bytecode, shortCircuitJumpAddr, valueAddr - shortCircuitJumpAddr);
@@ -519,7 +519,7 @@ static void compileIf(COMPILE_PARAMETERS) {
             advanceCompiler(engine, compiler);
             compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
         } else {
-            piccolo_writeConst(engine, bytecode, NIL_VAL(), charIdx);
+            piccolo_writeConst(engine, bytecode, PICCOLO_NIL_VAL(), charIdx);
         }
 
         int elseEndAddr = bytecode->code.count;

@@ -74,7 +74,7 @@ struct piccolo_ObjArray* piccolo_newArray(struct piccolo_Engine* engine, int len
     struct piccolo_ObjArray* array = ALLOCATE_OBJ(engine, struct piccolo_ObjArray, PICCOLO_OBJ_ARRAY);
     piccolo_initValueArray(&array->array);
     for(int i = 0; i < len; i++)
-        piccolo_writeValueArray(engine, &array->array, NIL_VAL());
+        piccolo_writeValueArray(engine, &array->array, PICCOLO_NIL_VAL());
     return array;
 }
 

@@ -35,8 +35,8 @@ static void markObj(struct piccolo_Obj* obj) {
 }
 
 static void markValue(piccolo_Value value) {
-    if(IS_OBJ(value)) {
-        markObj(AS_OBJ(value));
+    if(PICCOLO_IS_OBJ(value)) {
+        markObj(PICCOLO_AS_OBJ(value));
     }
 }
 

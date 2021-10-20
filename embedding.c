@@ -8,7 +8,7 @@ piccolo_Value piccolo_getGlobalWithNameSize(struct piccolo_Engine* engine, struc
         if(package->globalVars.values[i].nameLen == nameLen && memcmp(package->globalVars.values[i].name, name, nameLen) == 0)
             return package->globals.values[package->globalVars.values[i].slot];
     }
-    return NIL_VAL();
+    return PICCOLO_NIL_VAL();
 }
 
 piccolo_Value piccolo_getGlobal(struct piccolo_Engine* engine, struct piccolo_Package* package, const char* name) {

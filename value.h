@@ -26,22 +26,22 @@ struct piccolo_Value {
 
 typedef struct piccolo_Value piccolo_Value;
 
-#define IS_NIL(value) (value.type == PICCOLO_VALUE_NIL)
-#define IS_NUM(value) (value.type == PICCOLO_VALUE_NUMBER)
-#define IS_BOOL(value) (value.type == PICCOLO_VALUE_BOOL)
-#define IS_PTR(value) (value.type == PICCOLO_VALUE_PTR)
-#define IS_OBJ(value) (value.type == PICCOLO_VALUE_OBJ)
+#define PICCOLO_IS_NIL(value) (value.type == PICCOLO_VALUE_NIL)
+#define PICCOLO_IS_NUM(value) (value.type == PICCOLO_VALUE_NUMBER)
+#define PICCOLO_IS_BOOL(value) (value.type == PICCOLO_VALUE_BOOL)
+#define PICCOLO_IS_PTR(value) (value.type == PICCOLO_VALUE_PTR)
+#define PICCOLO_IS_OBJ(value) (value.type == PICCOLO_VALUE_OBJ)
 
-#define AS_NUM(value) (value.as.number)
-#define AS_BOOL(value) (value.as.boolean)
-#define AS_PTR(value) (value.as.ptr)
-#define AS_OBJ(value) (value.as.obj)
+#define PICCOLO_AS_NUM(value) (value.as.number)
+#define PICCOLO_AS_BOOL(value) (value.as.boolean)
+#define PICCOLO_AS_PTR(value) (value.as.ptr)
+#define PICCOLO_AS_OBJ(value) (value.as.obj)
 
-#define NIL_VAL() ((piccolo_Value){PICCOLO_VALUE_NIL, {.number = 0}})
-#define NUM_VAL(num) ((piccolo_Value){PICCOLO_VALUE_NUMBER, {.number = (num)}})
-#define BOOL_VAL(bool) ((piccolo_Value){PICCOLO_VALUE_BOOL, {.boolean = (bool)}})
-#define PTR_VAL(pointer) ((piccolo_Value){PICCOLO_VALUE_PTR, {.ptr = (pointer)}})
-#define OBJ_VAL(object)((piccolo_Value){PICCOLO_VALUE_OBJ, {.obj = (object)}})
+#define PICCOLO_NIL_VAL() ((piccolo_Value){PICCOLO_VALUE_NIL, {.number = 0}})
+#define PICCOLO_NUM_VAL(num) ((piccolo_Value){PICCOLO_VALUE_NUMBER, {.number = (num)}})
+#define PICCOLO_BOOL_VAL(bool) ((piccolo_Value){PICCOLO_VALUE_BOOL, {.boolean = (bool)}})
+#define PICCOLO_PTR_VAL(pointer) ((piccolo_Value){PICCOLO_VALUE_PTR, {.ptr = (pointer)}})
+#define PICCOLO_OBJ_VAL(object)((piccolo_Value){PICCOLO_VALUE_OBJ, {.obj = (object)}})
 
 PICCOLO_DYNARRAY_HEADER(piccolo_Value, Value)
 

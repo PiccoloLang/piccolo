@@ -32,8 +32,8 @@ void piccolo_freeEngine(struct piccolo_Engine* engine) {
 }
 
 static void evaporatePointer(piccolo_Value* value) {
-    while(IS_PTR((*value)))
-        *value = *AS_PTR((*value));
+    while(PICCOLO_IS_PTR((*value)))
+        *value = *PICCOLO_AS_PTR((*value));
 }
 
 static bool run(struct piccolo_Engine* engine) {
@@ -60,19 +60,19 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
                 evaporatePointer(&b);
-                if(IS_NUM(a) && IS_NUM(b)) {
-                    piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) + AS_NUM(a)));
+                if(PICCOLO_IS_NUM(a) && PICCOLO_IS_NUM(b)) {
+                    piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(PICCOLO_AS_NUM(b) + PICCOLO_AS_NUM(a)));
                     break;
                 }
-                if(IS_OBJ(a) && IS_OBJ(b) && AS_OBJ(a)->type == PICCOLO_OBJ_STRING && AS_OBJ(b)->type == PICCOLO_OBJ_STRING) {
-                    struct piccolo_ObjString* bStr = (struct piccolo_ObjString*)AS_OBJ(a);
-                    struct piccolo_ObjString* aStr = (struct piccolo_ObjString*)AS_OBJ(b);
+                if(PICCOLO_IS_OBJ(a) && PICCOLO_IS_OBJ(b) && PICCOLO_AS_OBJ(a)->type == PICCOLO_OBJ_STRING && PICCOLO_AS_OBJ(b)->type == PICCOLO_OBJ_STRING) {
+                    struct piccolo_ObjString* bStr = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(a);
+                    struct piccolo_ObjString* aStr = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(b);
                     char* result = PICCOLO_REALLOCATE("string concat", engine, NULL, 0, aStr->len + bStr->len + 1);
                     memcpy(result, aStr->string, aStr->len);
                     memcpy(result + aStr->len, bStr->string, bStr->len);
                     result[aStr->len + bStr->len] = '\0';
                     struct piccolo_ObjString* resultStr = piccolo_takeString(engine, result);
-                    piccolo_enginePushStack(engine, OBJ_VAL(resultStr));
+                    piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(resultStr));
                     break;
                 }
                 piccolo_runtimeError(engine, "Cannot add %s and %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
@@ -83,11 +83,11 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
                 evaporatePointer(&b);
-                if(!IS_NUM(a) || !IS_NUM(b)) {
+                if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot subtract %s from %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
                     break;
                 }
-                piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) - AS_NUM(a)));
+                piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(PICCOLO_AS_NUM(b) - PICCOLO_AS_NUM(a)));
                 break;
             }
             case PICCOLO_OP_MUL: {
@@ -95,27 +95,27 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
                 evaporatePointer(&b);
-                if(IS_NUM(a) && IS_NUM(b)) {
-                    piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) * AS_NUM(a)));
+                if(PICCOLO_IS_NUM(a) && PICCOLO_IS_NUM(b)) {
+                    piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(PICCOLO_AS_NUM(b) * PICCOLO_AS_NUM(a)));
                     break;
                 }
-                if((IS_NUM(a) && IS_OBJ(b) && AS_OBJ(b)->type == PICCOLO_OBJ_STRING) ||
-                   (IS_NUM(b) && IS_OBJ(a) && AS_OBJ(a)->type == PICCOLO_OBJ_STRING)) {
+                if((PICCOLO_IS_NUM(a) && PICCOLO_IS_OBJ(b) && PICCOLO_AS_OBJ(b)->type == PICCOLO_OBJ_STRING) ||
+                   (PICCOLO_IS_NUM(b) && PICCOLO_IS_OBJ(a) && PICCOLO_AS_OBJ(a)->type == PICCOLO_OBJ_STRING)) {
                     int repetitions;
                     struct piccolo_ObjString* string;
-                    if(IS_NUM(a)) {
-                        repetitions = AS_NUM(a);
-                        string = (struct piccolo_ObjString*)AS_OBJ(b);
+                    if(PICCOLO_IS_NUM(a)) {
+                        repetitions = PICCOLO_AS_NUM(a);
+                        string = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(b);
                     } else {
-                        repetitions = AS_NUM(b);
-                        string = (struct piccolo_ObjString*)AS_OBJ(a);
+                        repetitions = PICCOLO_AS_NUM(b);
+                        string = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(a);
                     }
                     char* result = PICCOLO_REALLOCATE("string multiplication", engine, NULL, 0, repetitions * string->len + 1);
                     for(int i = 0; i < repetitions; i++)
                         memcpy(result + i * string->len, string->string, string->len);
                     result[repetitions * string->len] = '\0';
                     struct piccolo_ObjString* resultStr = piccolo_takeString(engine, result);
-                    piccolo_enginePushStack(engine, OBJ_VAL(resultStr));
+                    piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(resultStr));
                     break;
                 }
                 piccolo_runtimeError(engine, "Cannot multiply %s by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
@@ -126,11 +126,11 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
                 evaporatePointer(&b);
-                if(!IS_NUM(a) || !IS_NUM(b)) {
+                if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot divide %s by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                     break;
                 }
-                piccolo_enginePushStack(engine, NUM_VAL(AS_NUM(b) / AS_NUM(a)));
+                piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(PICCOLO_AS_NUM(b) / PICCOLO_AS_NUM(a)));
                 break;
             }
             case PICCOLO_OP_EQUAL: {
@@ -138,31 +138,31 @@ static bool run(struct piccolo_Engine* engine) {
                 evaporatePointer(&a);
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&b);
-                if(IS_NUM(a) && IS_NUM(b)) {
-                    piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) == AS_NUM(b)));
+                if(PICCOLO_IS_NUM(a) && PICCOLO_IS_NUM(b)) {
+                    piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(PICCOLO_AS_NUM(a) == PICCOLO_AS_NUM(b)));
                     break;
                 }
-                if(IS_BOOL(a) && IS_BOOL(b)) {
-                    piccolo_enginePushStack(engine, BOOL_VAL(AS_BOOL(a) == AS_BOOL(b)));
+                if(PICCOLO_IS_BOOL(a) && PICCOLO_IS_BOOL(b)) {
+                    piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(PICCOLO_AS_BOOL(a) == PICCOLO_AS_BOOL(b)));
                     break;
                 }
-                if(IS_NIL(a) && IS_NIL(b)) {
-                    piccolo_enginePushStack(engine, BOOL_VAL(true));
+                if(PICCOLO_IS_NIL(a) && PICCOLO_IS_NIL(b)) {
+                    piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(true));
                     break;
                 }
-                if(IS_OBJ(a) && IS_OBJ(b)) {
-                    struct piccolo_Obj* aObj = AS_OBJ(a);
-                    struct piccolo_Obj* bObj = AS_OBJ(b);
+                if(PICCOLO_IS_OBJ(a) && PICCOLO_IS_OBJ(b)) {
+                    struct piccolo_Obj* aObj = PICCOLO_AS_OBJ(a);
+                    struct piccolo_Obj* bObj = PICCOLO_AS_OBJ(b);
                     if(aObj->type == PICCOLO_OBJ_STRING && bObj->type == PICCOLO_OBJ_STRING) {
                         struct piccolo_ObjString* aStr = (struct piccolo_ObjString*)aObj;
                         struct piccolo_ObjString* bStr = (struct piccolo_ObjString*)bObj;
                         if(aStr->len == bStr->len && strncmp(aStr->string, bStr->string, aStr->len) == 0) {
-                            piccolo_enginePushStack(engine, BOOL_VAL(true));
+                            piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(true));
                             break;
                         }
                     }
                 }
-                piccolo_enginePushStack(engine, BOOL_VAL(false));
+                piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(false));
                 break;
             }
             case PICCOLO_OP_GREATER: {
@@ -170,21 +170,21 @@ static bool run(struct piccolo_Engine* engine) {
                 evaporatePointer(&a);
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&b);
-                if(!IS_NUM(a) || !IS_NUM(b)) {
+                if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot compare %s and %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
                     break;
                 }
-                piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) < AS_NUM(b)));
+                piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(PICCOLO_AS_NUM(a) < PICCOLO_AS_NUM(b)));
                 break;
             }
             case PICCOLO_OP_NOT: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
                 evaporatePointer(&val);
-                if(!IS_BOOL(val)) {
+                if(!PICCOLO_IS_BOOL(val)) {
                     piccolo_runtimeError(engine, "Cannot negate %s.", piccolo_getTypeName(val));
                     break;
                 }
-                piccolo_enginePushStack(engine, BOOL_VAL(!AS_BOOL(val)));
+                piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(!PICCOLO_AS_BOOL(val)));
                 break;
             }
             case PICCOLO_OP_LESS: {
@@ -192,10 +192,10 @@ static bool run(struct piccolo_Engine* engine) {
                 evaporatePointer(&a);
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 evaporatePointer(&b);
-                if(!IS_NUM(a) || !IS_NUM(b)) {
+                if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot compare %s and %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
                 }
-                piccolo_enginePushStack(engine, BOOL_VAL(AS_NUM(a) > AS_NUM(b)));
+                piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(PICCOLO_AS_NUM(a) > PICCOLO_AS_NUM(b)));
                 break;
             }
             case PICCOLO_OP_CREATE_ARRAY: {
@@ -203,7 +203,7 @@ static bool run(struct piccolo_Engine* engine) {
                 struct piccolo_ObjArray* array = piccolo_newArray(engine, len);
                 for(int i = len - 1; i >= 0; i--)
                     array->array.values[i] = piccolo_enginePopStack(engine);
-                piccolo_enginePushStack(engine, OBJ_VAL(array));
+                piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(array));
                 break;
             }
             case PICCOLO_OP_GET_IDX: {
@@ -211,23 +211,23 @@ static bool run(struct piccolo_Engine* engine) {
                 evaporatePointer(&idx);
                 piccolo_Value container = piccolo_enginePopStack(engine);
                 evaporatePointer(&container);
-                if(!IS_OBJ(container)) {
+                if(!PICCOLO_IS_OBJ(container)) {
                     piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
                 } else {
-                    struct piccolo_Obj* containerObj = AS_OBJ(container);
+                    struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
                     switch(containerObj->type) {
                         case PICCOLO_OBJ_ARRAY: {
                             struct piccolo_ObjArray* array = (struct piccolo_ObjArray*)containerObj;
-                            if(!IS_NUM(idx)) {
+                            if(!PICCOLO_IS_NUM(idx)) {
                                 piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
                                 break;
                             }
-                            int idxNum = AS_NUM(idx);
+                            int idxNum = PICCOLO_AS_NUM(idx);
                             if(idxNum < 0 || idxNum >= array->array.count) {
                                 piccolo_runtimeError(engine, "Array index out of bounds.");
                                 break;
                             }
-                            piccolo_enginePushStack(engine, PTR_VAL(array->array.values + idxNum));
+                            piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(array->array.values + idxNum));
                             break;
                         }
                         default:
@@ -242,25 +242,25 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_GET_STACK: {
                 int slot = READ_PARAM();
-                piccolo_enginePushStack(engine, PTR_VAL(engine->frames[engine->currFrame].varStack + slot));
+                piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(engine->frames[engine->currFrame].varStack + slot));
                 break;
             }
             case PICCOLO_OP_GET_GLOBAL: {
                 int slot = READ_PARAM();
                 while(engine->currentPackage->globals.count <= slot)
-                    piccolo_writeValueArray(engine, &engine->currentPackage->globals, NIL_VAL());
-                piccolo_enginePushStack(engine, PTR_VAL(engine->currentPackage->globals.values + slot));
+                    piccolo_writeValueArray(engine, &engine->currentPackage->globals, PICCOLO_NIL_VAL());
+                piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(engine->currentPackage->globals.values + slot));
                 break;
             }
             case PICCOLO_OP_SET: {
                 piccolo_Value value = piccolo_enginePopStack(engine);
                 evaporatePointer(&value);
                 piccolo_Value ptr = piccolo_enginePopStack(engine);
-                if(!IS_PTR(ptr)) {
+                if(!PICCOLO_IS_PTR(ptr)) {
                     piccolo_runtimeError(engine, "Cannot assign to %s", piccolo_getTypeName(ptr));
                     break;
                 }
-                *AS_PTR(ptr) = value;
+                *PICCOLO_AS_PTR(ptr) = value;
                 piccolo_enginePushStack(engine, value);
                 break;
             }
@@ -273,11 +273,11 @@ static bool run(struct piccolo_Engine* engine) {
                 int jumpDist = READ_PARAM();
                 piccolo_Value condition = piccolo_enginePopStack(engine);
                 evaporatePointer(&condition);
-                if(!IS_BOOL(condition)) {
+                if(!PICCOLO_IS_BOOL(condition)) {
                     piccolo_runtimeError(engine, "Condition must be a boolean.");
                     break;
                 }
-                if(!AS_BOOL(condition)) {
+                if(!PICCOLO_AS_BOOL(condition)) {
                     engine->frames[engine->currFrame].ip += jumpDist - 3;
                 }
                 break;
@@ -298,15 +298,15 @@ static bool run(struct piccolo_Engine* engine) {
                     break;
                 }
 
-                if(!IS_OBJ(func) || (AS_OBJ(func)->type != PICCOLO_OBJ_CLOSURE && AS_OBJ(func)->type != PICCOLO_OBJ_NATIVE_FN)) {
+                if(!PICCOLO_IS_OBJ(func) || (PICCOLO_AS_OBJ(func)->type != PICCOLO_OBJ_CLOSURE && PICCOLO_AS_OBJ(func)->type != PICCOLO_OBJ_NATIVE_FN)) {
                     engine->currFrame--;
                     piccolo_runtimeError(engine, "Cannot call %s.", piccolo_getTypeName(func));
                     break;
                 }
-                enum piccolo_ObjType type = AS_OBJ(func)->type;
+                enum piccolo_ObjType type = PICCOLO_AS_OBJ(func)->type;
 
                 if(type == PICCOLO_OBJ_CLOSURE) {
-                    struct piccolo_ObjClosure* closureObj = (struct piccolo_ObjClosure*)AS_OBJ(func);
+                    struct piccolo_ObjClosure* closureObj = (struct piccolo_ObjClosure*)PICCOLO_AS_OBJ(func);
                     struct piccolo_ObjFunction* funcObj = closureObj->prototype;
                     engine->frames[engine->currFrame].ip = engine->frames[engine->currFrame].prevIp = 0;
                     engine->frames[engine->currFrame].bytecode = &funcObj->bytecode;
@@ -318,7 +318,7 @@ static bool run(struct piccolo_Engine* engine) {
                     }
                 }
                 if(type == PICCOLO_OBJ_NATIVE_FN) {
-                    struct piccolo_ObjNativeFn* native = (struct piccolo_ObjNativeFn*)AS_OBJ(func);
+                    struct piccolo_ObjNativeFn* native = (struct piccolo_ObjNativeFn*)PICCOLO_AS_OBJ(func);
                     engine->currFrame--;
                     piccolo_enginePushStack(engine, native->native(engine, argCount, engine->frames[engine->currFrame + 1].varStack));
                     break;
@@ -327,7 +327,7 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_CLOSURE: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
-                struct piccolo_ObjFunction* func = (struct piccolo_ObjFunction*)AS_OBJ(val);
+                struct piccolo_ObjFunction* func = (struct piccolo_ObjFunction*)PICCOLO_AS_OBJ(val);
                 int upvals = READ_PARAM();
                 struct piccolo_ObjClosure* closure = piccolo_newClosure(engine, func, upvals);
                 for(int i = 0; i < upvals; i++) {
@@ -337,12 +337,12 @@ static bool run(struct piccolo_Engine* engine) {
                     else
                         closure->upvals[i] = engine->frames[engine->currFrame].closure->upvals[slot];
                 }
-                piccolo_enginePushStack(engine, OBJ_VAL(closure));
+                piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(closure));
                 break;
             }
             case PICCOLO_OP_GET_UPVAL: {
                 int slot = READ_PARAM();
-                piccolo_enginePushStack(engine, PTR_VAL(engine->frames[engine->currFrame].closure->upvals[slot]->valPtr));
+                piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(engine->frames[engine->currFrame].closure->upvals[slot]->valPtr));
                 break;
             }
             case PICCOLO_OP_CLOSE_UPVALS: {
