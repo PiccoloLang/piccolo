@@ -538,17 +538,23 @@ static void compileWhile(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_WHILE) {
         advanceCompiler(engine, compiler);
         int charIdx = compiler->current.charIdx;
+
         if(requireValue) {
-            compilationError(engine, compiler, "While with req val is not implemented");
-            return;
+            piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 0, charIdx);
         }
 
         int whileStartAddr = bytecode->code.count;
         compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
         int fwdJumpAddr = bytecode->code.count;
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP_FALSE, 0, charIdx);
-        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
-        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+
+        if(requireValue) {
+            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+            piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 1, charIdx);
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_ADD, charIdx);
+        } else {
+            compileExpr(COMPILE_ARGUMENTS);
+        }
         int revJumpAddr = bytecode->code.count;
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_REV_JUMP, 0, charIdx);
         int whileEndAddr = bytecode->code.count;

@@ -64,16 +64,29 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(PICCOLO_AS_NUM(b) + PICCOLO_AS_NUM(a)));
                     break;
                 }
-                if(PICCOLO_IS_OBJ(a) && PICCOLO_IS_OBJ(b) && PICCOLO_AS_OBJ(a)->type == PICCOLO_OBJ_STRING && PICCOLO_AS_OBJ(b)->type == PICCOLO_OBJ_STRING) {
-                    struct piccolo_ObjString* bStr = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(a);
-                    struct piccolo_ObjString* aStr = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(b);
-                    char* result = PICCOLO_REALLOCATE("string concat", engine, NULL, 0, aStr->len + bStr->len + 1);
-                    memcpy(result, aStr->string, aStr->len);
-                    memcpy(result + aStr->len, bStr->string, bStr->len);
-                    result[aStr->len + bStr->len] = '\0';
-                    struct piccolo_ObjString* resultStr = piccolo_takeString(engine, result);
-                    piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(resultStr));
-                    break;
+                if(PICCOLO_IS_OBJ(a) && PICCOLO_IS_OBJ(b)) {
+                    if(PICCOLO_AS_OBJ(a)->type == PICCOLO_OBJ_STRING && PICCOLO_AS_OBJ(b)->type == PICCOLO_OBJ_STRING) {
+                        struct piccolo_ObjString* bStr = (struct piccolo_ObjString*) PICCOLO_AS_OBJ(a);
+                        struct piccolo_ObjString* aStr = (struct piccolo_ObjString*) PICCOLO_AS_OBJ(b);
+                        char *result = PICCOLO_REALLOCATE("string concat", engine, NULL, 0, aStr->len + bStr->len + 1);
+                        memcpy(result, aStr->string, aStr->len);
+                        memcpy(result + aStr->len, bStr->string, bStr->len);
+                        result[aStr->len + bStr->len] = '\0';
+                        struct piccolo_ObjString* resultStr = piccolo_takeString(engine, result);
+                        piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(resultStr));
+                        break;
+                    }
+                    if(PICCOLO_AS_OBJ(a)->type == PICCOLO_OBJ_ARRAY && PICCOLO_AS_OBJ(b)->type == PICCOLO_OBJ_ARRAY) {
+                        struct piccolo_ObjArray* bArr = (struct piccolo_ObjArray*) PICCOLO_AS_OBJ(a);
+                        struct piccolo_ObjArray* aArr = (struct piccolo_ObjArray*) PICCOLO_AS_OBJ(b);
+                        struct piccolo_ObjArray* resultArr = piccolo_newArray(engine, aArr->array.count + bArr->array.count);
+                        for(int i = 0; i < aArr->array.count; i++)
+                            resultArr->array.values[i] = aArr->array.values[i];
+                        for(int i = 0; i < bArr->array.count; i++)
+                            resultArr->array.values[aArr->array.count + i] = bArr->array.values[i];
+                        piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(resultArr));
+                        break;
+                    }
                 }
                 piccolo_runtimeError(engine, "Cannot add %s and %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                 break;
