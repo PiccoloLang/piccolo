@@ -27,6 +27,7 @@ struct piccolo_Engine {
     bool hadError;
 
     size_t liveMemory;
+    size_t gcThreshold;
     struct piccolo_Obj* objs;
 
     void (*printError)(const char* format, va_list);

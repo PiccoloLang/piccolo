@@ -15,6 +15,7 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     engine->stackTop = engine->stack;
     engine->openUpvals = NULL;
     engine->liveMemory = 0;
+    engine->gcThreshold = 1024 * 1024;
     engine->objs = NULL;
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     engine->track = NULL;
@@ -380,7 +381,10 @@ static bool run(struct piccolo_Engine* engine) {
             }
         }
 
-        piccolo_collectGarbage(engine);
+        if(engine->liveMemory > engine->gcThreshold) {
+            piccolo_collectGarbage(engine);
+            engine->gcThreshold = engine->liveMemory * 2;
+        }
         if(engine->hadError) {
             return false;
         }
