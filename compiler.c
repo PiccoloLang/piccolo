@@ -539,25 +539,28 @@ static void compileWhile(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
         int charIdx = compiler->current.charIdx;
 
-        if(requireValue) {
-            piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 0, charIdx);
-        }
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 0, charIdx);
 
         int whileStartAddr = bytecode->code.count;
         compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
         int fwdJumpAddr = bytecode->code.count;
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP_FALSE, 0, charIdx);
 
-        if(requireValue) {
-            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+
+        if(requireValue || compiler->current.type == PICCOLO_TOKEN_RIGHT_BRACE) {
             piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 1, charIdx);
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_ADD, charIdx);
         } else {
-            compileExpr(COMPILE_ARGUMENTS);
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
         }
+
         int revJumpAddr = bytecode->code.count;
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_REV_JUMP, 0, charIdx);
         int whileEndAddr = bytecode->code.count;
+
+        if(!(requireValue || compiler->current.type == PICCOLO_TOKEN_RIGHT_BRACE))
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
 
         piccolo_patchParam(bytecode, fwdJumpAddr, whileEndAddr - fwdJumpAddr);
         piccolo_patchParam(bytecode, revJumpAddr, revJumpAddr - whileStartAddr);
