@@ -45,6 +45,9 @@ static enum piccolo_TokenType getKeyword(char* start, char* end) {
     TOKEN_TYPE(IF, "if")
     TOKEN_TYPE(ELSE, "else")
     TOKEN_TYPE(WHILE, "while")
+    TOKEN_TYPE(FOR, "for")
+    TOKEN_TYPE(IN, "in")
+
     return PICCOLO_TOKEN_IDENTIFIER;
     #undef TOKEN_TYPE
 }

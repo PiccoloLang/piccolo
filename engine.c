@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
-#include <stdlib.h>
 
 #include "util/strutil.h"
 #include "object.h"
@@ -15,7 +14,7 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     engine->stackTop = engine->stack;
     engine->openUpvals = NULL;
     engine->liveMemory = 0;
-    engine->gcThreshold = 1024 * 1024;
+    engine->gcThreshold = 1024 * 64;
     engine->objs = NULL;
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     engine->track = NULL;
@@ -215,8 +214,10 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_CREATE_ARRAY: {
                 int len = READ_PARAM();
                 struct piccolo_ObjArray* array = piccolo_newArray(engine, len);
-                for(int i = len - 1; i >= 0; i--)
+                for(int i = len - 1; i >= 0; i--) {
                     array->array.values[i] = piccolo_enginePopStack(engine);
+                    evaporatePointer(&array->array.values[i]);
+                }
                 piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(array));
                 break;
             }
@@ -254,7 +255,20 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePopStack(engine);
                 break;
             }
-            case PICCOLO_OP_GET_STACK: {
+            case PICCOLO_OP_PEEK_STACK: {
+                int dist = READ_PARAM();
+                piccolo_Value val = piccolo_enginePeekStack(engine, dist);
+                piccolo_enginePushStack(engine, val);
+                break;
+            }
+            case PICCOLO_OP_SWAP_STACK: {
+                piccolo_Value a = piccolo_enginePopStack(engine);
+                piccolo_Value b = piccolo_enginePopStack(engine);
+                piccolo_enginePushStack(engine, a);
+                piccolo_enginePushStack(engine, b);
+                break;
+            }
+            case PICCOLO_OP_GET_LOCAL: {
                 int slot = READ_PARAM();
                 piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(engine->frames[engine->currFrame].varStack + slot));
                 break;
@@ -299,6 +313,19 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_REV_JUMP: {
                 int jumpDist = READ_PARAM();
                 engine->frames[engine->currFrame].ip -= jumpDist + 3;
+                break;
+            }
+            case PICCOLO_OP_REV_JUMP_FALSE: {
+                int jumpDist = READ_PARAM();
+                piccolo_Value condition = piccolo_enginePopStack(engine);
+                evaporatePointer(&condition);
+                if(!PICCOLO_IS_BOOL(condition)) {
+                    piccolo_runtimeError(engine, "Condition must be a boolean.");
+                    break;
+                }
+                if(!PICCOLO_AS_BOOL(condition)) {
+                    engine->frames[engine->currFrame].ip -= jumpDist + 3;
+                }
                 break;
             }
             case PICCOLO_OP_CALL: {
@@ -375,6 +402,21 @@ static bool run(struct piccolo_Engine* engine) {
                 }
                 break;
             }
+            case PICCOLO_OP_GET_LEN: {
+                piccolo_Value val = piccolo_enginePopStack(engine);
+                evaporatePointer(&val);
+                if(PICCOLO_IS_OBJ(val) && PICCOLO_AS_OBJ(val)->type == PICCOLO_OBJ_ARRAY) {
+                    struct piccolo_ObjArray* arr = PICCOLO_AS_OBJ(val);
+                    piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(arr->array.count));
+                    break;
+                }
+                piccolo_runtimeError(engine, "Cannot get length of %s.", piccolo_getTypeName(val));
+                break;
+            }
+            case PICCOLO_OP_EVAPORATE_PTR: {
+                evaporatePointer(engine->stackTop - 1);
+                break;
+            }
             default: {
                 piccolo_runtimeError(engine, "Unknown opcode.");
                 break;
@@ -418,13 +460,13 @@ void piccolo_enginePushStack(struct piccolo_Engine* engine, piccolo_Value value)
 }
 
 piccolo_Value piccolo_enginePopStack(struct piccolo_Engine* engine) {
-    piccolo_Value value = piccolo_enginePeekStack(engine);
+    piccolo_Value value = piccolo_enginePeekStack(engine, 1);
     engine->stackTop--;
     return value;
 }
 
-piccolo_Value piccolo_enginePeekStack(struct piccolo_Engine* engine) {
-    return *(engine->stackTop - 1);
+piccolo_Value piccolo_enginePeekStack(struct piccolo_Engine* engine, int dist) {
+    return *(engine->stackTop - dist);
 }
 
 void piccolo_runtimeError(struct piccolo_Engine* engine, const char* format, ...) {

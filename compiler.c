@@ -237,7 +237,7 @@ static void compileVarLookup(COMPILE_PARAMETERS) {
                     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_UPVAL, upvalSlot, varName.charIdx);
                 }
             } else {
-                piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_STACK, localSlot, varName.charIdx);
+                piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_LOCAL, localSlot, varName.charIdx);
             }
         } else {
             piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_GLOBAL, globalSlot, varName.charIdx);
@@ -248,29 +248,29 @@ static void compileVarLookup(COMPILE_PARAMETERS) {
     compileFnLiteral(COMPILE_ARGUMENTS);
 }
 
-static void compileFnCall(COMPILE_PARAMETERS) {
-    compileVarLookup(COMPILE_ARGUMENTS);
-    while(compiler->current.type == PICCOLO_TOKEN_LEFT_PAREN) {
-        int charIdx = compiler->current.charIdx;
-        advanceCompiler(engine, compiler);
-        int args = 0;
-        while(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN) {
-            if(compiler->current.type == PICCOLO_TOKEN_EOF) {
-                compilationError(engine, compiler, "Expected ).");
-                break;
-            }
-            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
-            if(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN && compiler->current.type != PICCOLO_TOKEN_COMMA)
-                compilationError(engine, compiler, "Expected comma.");
-            if(compiler->current.type == PICCOLO_TOKEN_COMMA)
-                advanceCompiler(engine, compiler);
-
-            args++;
-        }
-        advanceCompiler(engine, compiler);
-        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CALL, args, charIdx);
-    }
-}
+//static void compileFnCall(COMPILE_PARAMETERS) {
+//    compileVarLookup(COMPILE_ARGUMENTS);
+//    while(compiler->current.type == PICCOLO_TOKEN_LEFT_PAREN) {
+//        int charIdx = compiler->current.charIdx;
+//        advanceCompiler(engine, compiler);
+//        int args = 0;
+//        while(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN) {
+//            if(compiler->current.type == PICCOLO_TOKEN_EOF) {
+//                compilationError(engine, compiler, "Expected ).");
+//                break;
+//            }
+//            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+//            if(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN && compiler->current.type != PICCOLO_TOKEN_COMMA)
+//                compilationError(engine, compiler, "Expected comma.");
+//            if(compiler->current.type == PICCOLO_TOKEN_COMMA)
+//                advanceCompiler(engine, compiler);
+//
+//            args++;
+//        }
+//        advanceCompiler(engine, compiler);
+//        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CALL, args, charIdx);
+//    }
+//}
 
 static void compileArray(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_LEFT_SQR_PAREN) {
@@ -295,7 +295,7 @@ static void compileArray(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
         return;
     }
-    compileFnCall(COMPILE_ARGUMENTS);
+    compileVarLookup(COMPILE_ARGUMENTS);
 }
 
 static void compileIndexing(COMPILE_PARAMETERS) {
@@ -325,6 +325,30 @@ static void compileIndexing(COMPILE_PARAMETERS) {
     }
 }
 
+static void compileFnCall(COMPILE_PARAMETERS) {
+    compileIndexing(COMPILE_ARGUMENTS);
+    while(compiler->current.type == PICCOLO_TOKEN_LEFT_PAREN) {
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        int args = 0;
+        while(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN) {
+            if(compiler->current.type == PICCOLO_TOKEN_EOF) {
+                compilationError(engine, compiler, "Expected ).");
+                break;
+            }
+            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
+            if(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN && compiler->current.type != PICCOLO_TOKEN_COMMA)
+                compilationError(engine, compiler, "Expected comma.");
+            if(compiler->current.type == PICCOLO_TOKEN_COMMA)
+                advanceCompiler(engine, compiler);
+
+            args++;
+        }
+        advanceCompiler(engine, compiler);
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CALL, args, charIdx);
+    }
+}
+
 static void compileUnary(COMPILE_PARAMETERS) {
     while(compiler->current.type == PICCOLO_TOKEN_MINUS || compiler->current.type == PICCOLO_TOKEN_BANG) {
         enum piccolo_TokenType op = compiler->current.type;
@@ -332,14 +356,14 @@ static void compileUnary(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
         if(op == PICCOLO_TOKEN_MINUS)
             piccolo_writeConst(engine, bytecode, PICCOLO_NUM_VAL(0), charIdx);
-        compileIndexing(COMPILE_ARGUMENTS_REQ_VAL);
+        compileFnCall(COMPILE_ARGUMENTS_REQ_VAL);
         if(op == PICCOLO_TOKEN_MINUS)
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SUB, charIdx);
         if(op == PICCOLO_TOKEN_BANG)
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_NOT, charIdx);
         return;
     }
-    compileIndexing(COMPILE_ARGUMENTS);
+    compileFnCall(COMPILE_ARGUMENTS);
 }
 
 static void compileMultiplicative(COMPILE_PARAMETERS) {
@@ -465,7 +489,7 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
                     compilationError(engine, compiler, "Variable %.*s already defined.", varName.length, varName.start);
                 } else {
                     slot = compiler->locals.count;
-                    piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_STACK, slot, varName.charIdx);
+                    piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_LOCAL, slot, varName.charIdx);
                 }
             }
         }
@@ -570,6 +594,96 @@ static void compileWhile(COMPILE_PARAMETERS) {
     compileIf(COMPILE_ARGUMENTS);
 }
 
+static void compileFor(COMPILE_PARAMETERS) {
+    if(compiler->current.type == PICCOLO_TOKEN_FOR) {
+        advanceCompiler(engine, compiler);
+        struct piccolo_Token varName = compiler->current;
+        if(varName.type != PICCOLO_TOKEN_IDENTIFIER) {
+            compilationError(engine, compiler, "Expected variable name.");
+            return;
+        }
+        advanceCompiler(engine, compiler);
+        if(compiler->current.type != PICCOLO_TOKEN_IN) {
+            compilationError(engine, compiler, "Expected in.");
+            return;
+        }
+        advanceCompiler(engine, compiler);
+
+        int slot = -1;
+        if(getVarSlot(&compiler->locals, varName) != -1) {
+            compilationError(engine, compiler, "Variable %.*s is already defined.");
+            return;
+        } else {
+            struct piccolo_Variable iterVar;
+            iterVar.nameInSource = true;
+            iterVar.name = varName.start;
+            iterVar.nameLen = varName.length;
+            slot = iterVar.slot = compiler->locals.count;
+            piccolo_writeVariableArray(engine, &compiler->locals, iterVar);
+        }
+
+        // If value required:
+        // arr idx [prev]
+        // arr idx [prev] &iterVar
+        // arr idx [prev] &iterVar arr
+        // arr idx [prev] &iterVar arr idx
+        // arr idx [prev] &iterVar &elem
+        // arr idx [prev] &elem
+        // arr idx [prev]
+        // arr [prev] idx
+        // arr [prev] idx 1
+        // arr [prev] (idx + 1)
+        // arr (idx + 1) [prev]
+        // arr (idx + 1) [prev] loopVal
+        // arr (idx + 1) [prev] [loopVal]
+        // arr (idx + 1) [prev, loopVal]
+
+        int charIdx = compiler->current.charIdx;
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL); // arr
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_EVAPORATE_PTR, charIdx);
+        piccolo_writeConst(engine, bytecode, PICCOLO_NUM_VAL(0), charIdx);
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 0, charIdx);
+        int loopStartAddr = bytecode->code.count;
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_LOCAL, slot, charIdx);
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, 4, charIdx);
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, 4, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_IDX, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SET, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SWAP_STACK, charIdx);
+        piccolo_writeConst(engine, bytecode, PICCOLO_NUM_VAL(1), charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_ADD, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SWAP_STACK, charIdx);
+
+        compileExpr(COMPILE_ARGUMENTS_REQ_VAL); // Loop val
+
+        if(requireValue || compiler->current.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+            piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 1, charIdx);
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_ADD, charIdx);
+        } else {
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+        }
+
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, 3, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_LEN, charIdx);
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, 3, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GREATER, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_NOT, charIdx);
+        int jumpAddr = bytecode->code.count;
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_REV_JUMP_FALSE, jumpAddr - loopStartAddr, charIdx);
+
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SWAP_STACK, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SWAP_STACK, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+
+        compiler->locals.count--;
+
+        return;
+    }
+    compileWhile(COMPILE_ARGUMENTS);
+}
+
 static void compileBlock(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_LEFT_BRACE) {
         int localsBefore = compiler->locals.count;
@@ -579,7 +693,7 @@ static void compileBlock(COMPILE_PARAMETERS) {
                 compilationError(engine, compiler, "Expected }.");
                 break;
             }
-            compileWhile(engine, compiler, bytecode, false, false);
+            compileFor(engine, compiler, bytecode, false, false);
         }
         advanceCompiler(engine, compiler);
         int charIdx = compiler->current.charIdx;
@@ -589,7 +703,7 @@ static void compileBlock(COMPILE_PARAMETERS) {
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
         return;
     }
-    compileWhile(COMPILE_ARGUMENTS);
+    compileFor(COMPILE_ARGUMENTS);
 }
 
 static void compileExpr(COMPILE_PARAMETERS) {

@@ -38,17 +38,20 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         SIMPLE_INSTRUCTION(OP_NOT)
 
         SIMPLE_INSTRUCTION(OP_POP_STACK)
+        PARAM_INSTRUCTION(OP_PEEK_STACK)
+        SIMPLE_INSTRUCTION(OP_SWAP_STACK)
 
         PARAM_INSTRUCTION(OP_CREATE_ARRAY)
         SIMPLE_INSTRUCTION(OP_GET_IDX)
 
         PARAM_INSTRUCTION(OP_GET_GLOBAL)
-        PARAM_INSTRUCTION(OP_GET_STACK)
+        PARAM_INSTRUCTION(OP_GET_LOCAL)
         SIMPLE_INSTRUCTION(OP_SET)
 
         PARAM_INSTRUCTION(OP_JUMP)
         PARAM_INSTRUCTION(OP_JUMP_FALSE)
         PARAM_INSTRUCTION(OP_REV_JUMP)
+        PARAM_INSTRUCTION(OP_REV_JUMP_FALSE)
 
         PARAM_INSTRUCTION(OP_CALL)
 
@@ -62,6 +65,8 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         }
         PARAM_INSTRUCTION(OP_GET_UPVAL)
         SIMPLE_INSTRUCTION(OP_CLOSE_UPVALS)
+
+        SIMPLE_INSTRUCTION(OP_GET_LEN)
     }
     printf("Unknown Opcode.\n");
     return offset + 1;

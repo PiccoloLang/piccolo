@@ -48,7 +48,7 @@ void piccolo_enginePrintError(struct piccolo_Engine* engine, const char* format,
 
 void piccolo_enginePushStack(struct piccolo_Engine* engine, piccolo_Value value);
 piccolo_Value piccolo_enginePopStack(struct piccolo_Engine* engine);
-piccolo_Value piccolo_enginePeekStack(struct piccolo_Engine* engine);
+piccolo_Value piccolo_enginePeekStack(struct piccolo_Engine* engine, int dist);
 
 void piccolo_runtimeError(struct piccolo_Engine* engine, const char* format, ...);
 
