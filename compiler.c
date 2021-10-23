@@ -161,6 +161,16 @@ static void compileLiteral(COMPILE_PARAMETERS) {
     advanceCompiler(engine, compiler);
 }
 
+static void compileRange(COMPILE_PARAMETERS) {
+    compileLiteral(COMPILE_ARGUMENTS);
+    if(compiler->current.type == PICCOLO_TOKEN_DOT_DOT) {
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        compileLiteral(COMPILE_ARGUMENTS);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CREATE_RANGE, charIdx);
+    }
+}
+
 static void compileFnLiteral(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_FN) {
         int charIdx = compiler->current.charIdx;
@@ -220,7 +230,7 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
         freeCompiler(engine, &functionCompiler);
         return;
     }
-    compileLiteral(COMPILE_ARGUMENTS);
+    compileRange(COMPILE_ARGUMENTS);
 }
 
 static void compileVarLookup(COMPILE_PARAMETERS) {
@@ -247,30 +257,6 @@ static void compileVarLookup(COMPILE_PARAMETERS) {
     }
     compileFnLiteral(COMPILE_ARGUMENTS);
 }
-
-//static void compileFnCall(COMPILE_PARAMETERS) {
-//    compileVarLookup(COMPILE_ARGUMENTS);
-//    while(compiler->current.type == PICCOLO_TOKEN_LEFT_PAREN) {
-//        int charIdx = compiler->current.charIdx;
-//        advanceCompiler(engine, compiler);
-//        int args = 0;
-//        while(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN) {
-//            if(compiler->current.type == PICCOLO_TOKEN_EOF) {
-//                compilationError(engine, compiler, "Expected ).");
-//                break;
-//            }
-//            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
-//            if(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN && compiler->current.type != PICCOLO_TOKEN_COMMA)
-//                compilationError(engine, compiler, "Expected comma.");
-//            if(compiler->current.type == PICCOLO_TOKEN_COMMA)
-//                advanceCompiler(engine, compiler);
-//
-//            args++;
-//        }
-//        advanceCompiler(engine, compiler);
-//        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CALL, args, charIdx);
-//    }
-//}
 
 static void compileArray(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_LEFT_SQR_PAREN) {
@@ -368,7 +354,7 @@ static void compileUnary(COMPILE_PARAMETERS) {
 
 static void compileMultiplicative(COMPILE_PARAMETERS) {
     compileUnary(COMPILE_ARGUMENTS);
-    while(compiler->current.type == PICCOLO_TOKEN_STAR || compiler->current.type == PICCOLO_TOKEN_SLASH) {
+    while(compiler->current.type == PICCOLO_TOKEN_STAR || compiler->current.type == PICCOLO_TOKEN_SLASH || compiler->current.type == PICCOLO_TOKEN_PERCENT) {
         enum piccolo_TokenType operation = compiler->current.type;
         int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
@@ -377,6 +363,8 @@ static void compileMultiplicative(COMPILE_PARAMETERS) {
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_MUL, charIdx);
         if(operation == PICCOLO_TOKEN_SLASH)
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_DIV, charIdx);
+        if(operation == PICCOLO_TOKEN_PERCENT)
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_MOD, charIdx);
     }
 }
 

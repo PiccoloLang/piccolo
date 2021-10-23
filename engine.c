@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
+#include <math.h>
 
 #include "util/strutil.h"
 #include "object.h"
@@ -166,6 +167,18 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(PICCOLO_AS_NUM(b) / PICCOLO_AS_NUM(a)));
                 break;
             }
+            case PICCOLO_OP_MOD: {
+                piccolo_Value a = piccolo_enginePopStack(engine);
+                piccolo_Value b = piccolo_enginePopStack(engine);
+                evaporatePointer(&a);
+                evaporatePointer(&b);
+                if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
+                    piccolo_runtimeError(engine, "Cannot get remainder of %s divided by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
+                    break;
+                }
+                piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(fmod(PICCOLO_AS_NUM(b), PICCOLO_AS_NUM(a))));
+                break;
+            }
             case PICCOLO_OP_EQUAL: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 evaporatePointer(&a);
@@ -239,6 +252,23 @@ static bool run(struct piccolo_Engine* engine) {
                     evaporatePointer(&array->array.values[i]);
                 }
                 piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(array));
+                break;
+            }
+            case PICCOLO_OP_CREATE_RANGE: {
+                piccolo_Value b = piccolo_enginePopStack(engine);
+                evaporatePointer(&b);
+                piccolo_Value a = piccolo_enginePopStack(engine);
+                evaporatePointer(&a);
+                if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
+                    piccolo_runtimeError(engine, "Cannot create range between %s and %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
+                    break;
+                }
+                int aNum = PICCOLO_AS_NUM(a);
+                int bNum = PICCOLO_AS_NUM(b);
+                struct piccolo_ObjArray* range = piccolo_newArray(engine, bNum - aNum);
+                for(int i = 0; i < bNum - aNum; i++)
+                    range->array.values[i] = PICCOLO_NUM_VAL(aNum + i);
+                piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(range));
                 break;
             }
             case PICCOLO_OP_GET_IDX: {

@@ -96,6 +96,10 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
             }
             return makeToken(scanner, PICCOLO_TOKEN_SLASH);
         }
+        case '%': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_PERCENT);
+        }
         case '=': {
             scanner->current++;
             if(*scanner->current == '=') {
@@ -160,6 +164,14 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
             scanner->current++;
             return makeToken(scanner, PICCOLO_TOKEN_STRING);
         }
+        case '.': {
+            scanner->current++;
+            if(*scanner->current == '.') {
+                scanner->current++;
+                return makeToken(scanner, PICCOLO_TOKEN_DOT_DOT);
+            }
+            return makeToken(scanner, PICCOLO_TOKEN_DOT);
+        }
         case '\0': {
             return makeToken(scanner, PICCOLO_TOKEN_EOF);
         }
@@ -171,6 +183,10 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
         }
         if(*scanner->current == '.')
             scanner->current++;
+        if(*scanner->current == '.') {
+            scanner->current--;
+            return makeToken(scanner, PICCOLO_TOKEN_NUM);
+        }
         while(numeric(*scanner->current)) {
             scanner->current++;
         }
