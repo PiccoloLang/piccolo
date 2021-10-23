@@ -676,19 +676,25 @@ static void compileBlock(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_LEFT_BRACE) {
         int localsBefore = compiler->locals.count;
         advanceCompiler(engine, compiler);
-        while(compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE) {
-            if(compiler->current.type == PICCOLO_TOKEN_EOF) {
-                compilationError(engine, compiler, "Expected }.");
-                break;
+        if(compiler->current.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+            int charIdx = compiler->current.charIdx;
+            piccolo_writeConst(engine, bytecode, PICCOLO_NIL_VAL(), charIdx);
+            advanceCompiler(engine, compiler);
+        } else {
+            while (compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE) {
+                if (compiler->current.type == PICCOLO_TOKEN_EOF) {
+                    compilationError(engine, compiler, "Expected }.");
+                    break;
+                }
+                compileFor(engine, compiler, bytecode, false, false);
             }
-            compileFor(engine, compiler, bytecode, false, false);
+            advanceCompiler(engine, compiler);
+            int charIdx = compiler->current.charIdx;
+            if (!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
+                piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+            compiler->locals.count = localsBefore;
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
         }
-        advanceCompiler(engine, compiler);
-        int charIdx = compiler->current.charIdx;
-        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
-            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
-        compiler->locals.count = localsBefore;
-        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
         return;
     }
     compileFor(COMPILE_ARGUMENTS);
