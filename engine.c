@@ -544,6 +544,7 @@ void piccolo_runtimeError(struct piccolo_Engine* engine, const char* format, ...
 
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
 
+#include <stdlib.h>
 void piccolo_freeMemTracks(struct piccolo_Engine* engine) {
     struct piccolo_MemoryTrack* track = engine->track;
     while(track != NULL) {

@@ -26,6 +26,14 @@ static piccolo_Value clockNative(struct piccolo_Engine* engine, int argc, struct
     return PICCOLO_NUM_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
+
+static piccolo_Value printAllocs(struct piccolo_Engine* engine, int argc, piccolo_Value* args) {
+#ifdef PICCOLO_ENABLE_MEMORY_TRACKER
+    piccolo_printMemAllocs(engine);
+#endif
+    return PICCOLO_NIL_VAL();
+}
+
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     piccolo_initValueArray(&package->globals);
     piccolo_initVariableArray(&package->globalVars);
@@ -44,6 +52,7 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
 
     piccolo_defineGlobal(engine, package, "print", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, printNative)));
     piccolo_defineGlobal(engine, package, "clock", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, clockNative)));
+    piccolo_defineGlobal(engine, package, "printAllocs", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, printAllocs)));
 
     if(!piccolo_compilePackage(engine, package)) {
         piccolo_enginePrintError(engine, "Compilation error.\n");

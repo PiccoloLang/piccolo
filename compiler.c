@@ -191,6 +191,7 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
             struct piccolo_Token parameterName = compiler->current;
             if(compiler->current.type != PICCOLO_TOKEN_IDENTIFIER) {
                 compilationError(engine, compiler, "Expected parameter name.");
+                break;
             } else {
                 struct piccolo_Variable parameter;
                 parameter.name = parameterName.start;
@@ -199,8 +200,18 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
                 parameter.nameInSource = true;
                 piccolo_writeVariableArray(engine, &functionCompiler.locals, parameter);
                 function->arity++;
+                advanceCompiler(engine, compiler);
+                if(compiler->current.type == PICCOLO_TOKEN_COMMA) {
+                    advanceCompiler(engine, compiler);
+                    if(compiler->current.type != PICCOLO_TOKEN_IDENTIFIER) {
+                        compilationError(engine, compiler, "Expected parameter name.");
+                        break;
+                    }
+                } else if(compiler->current.type != PICCOLO_TOKEN_ARROW) {
+                    compilationError(engine, compiler, "Expected comma.");
+                    break;
+                }
             }
-            advanceCompiler(engine, compiler);
         }
 
         advanceCompiler(engine, compiler);
