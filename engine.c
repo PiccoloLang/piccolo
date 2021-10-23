@@ -131,6 +131,26 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(resultStr));
                     break;
                 }
+                if((PICCOLO_IS_NUM(a) && PICCOLO_IS_OBJ(b) && PICCOLO_AS_OBJ(b)->type == PICCOLO_OBJ_ARRAY) ||
+                   (PICCOLO_IS_NUM(b) && PICCOLO_IS_OBJ(a) && PICCOLO_AS_OBJ(a)->type == PICCOLO_OBJ_ARRAY)) {
+                    int repetitions;
+                    struct piccolo_ObjArray* array;
+                    if(PICCOLO_IS_NUM(a)) {
+                        repetitions = PICCOLO_AS_NUM(a);
+                        array = (struct piccolo_ObjArray*)PICCOLO_AS_OBJ(b);
+                    } else {
+                        repetitions = PICCOLO_AS_NUM(b);
+                        array = (struct piccolo_ObjArray*)PICCOLO_AS_OBJ(a);
+                    }
+                    struct piccolo_ObjArray* result = piccolo_newArray(engine, array->array.count * repetitions);
+                    for(int i = 0; i < repetitions; i++) {
+                        for(int j = 0; j < array->array.count; j++) {
+                            result->array.values[i * array->array.count + j] = array->array.values[j];
+                        }
+                    }
+                    piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(result));
+                    break;
+                }
                 piccolo_runtimeError(engine, "Cannot multiply %s by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                 break;
             }
