@@ -176,7 +176,13 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_runtimeError(engine, "Cannot get remainder of %s divided by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                     break;
                 }
-                piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(fmod(PICCOLO_AS_NUM(b), PICCOLO_AS_NUM(a))));
+                double aNum = PICCOLO_AS_NUM(a);
+                double bNum = PICCOLO_AS_NUM(b);
+                if(aNum == (int)aNum && bNum == (int)bNum) {
+                    piccolo_enginePushStack(engine, PICCOLO_NUM_VAL((int)bNum % (int)aNum));
+                    break;
+                }
+                piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(fmod(bNum, aNum)));
                 break;
             }
             case PICCOLO_OP_EQUAL: {
