@@ -68,6 +68,7 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         SIMPLE_INSTRUCTION(OP_CLOSE_UPVALS)
 
         SIMPLE_INSTRUCTION(OP_GET_LEN)
+
         SIMPLE_INSTRUCTION(OP_EVAPORATE_PTR)
     }
     printf("Unknown Opcode.\n");

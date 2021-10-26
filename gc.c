@@ -41,6 +41,7 @@ static void markValue(piccolo_Value value) {
 }
 
 static void markPackage(struct piccolo_Package* package) {
+    package->obj.marked = true;
     for(int i = 0; i < package->bytecode.constants.count; i++)
         markValue(package->bytecode.constants.values[i]);
     for(int i = 0; i < package->globals.count; i++)
@@ -55,7 +56,8 @@ static void markRoots(struct piccolo_Engine* engine) {
             markValue(engine->frames[i].varStack[j]);
         markObj(engine->frames[i].closure);
     }
-    markPackage(&engine->package);
+    for(int i = 0; i < engine->packages.count; i++)
+        markPackage(engine->packages.values[i]);
 }
 
 void piccolo_collectGarbage(struct piccolo_Engine* engine) {

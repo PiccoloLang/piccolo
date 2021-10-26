@@ -10,49 +10,31 @@
 #include "time.h"
 #include "util/memory.h"
 
-// TODO: decouple this
-#include "embedding.h"
-#include <stdio.h>
-static piccolo_Value printNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
-    for(int i = 0; i < argc; i++) {
-        piccolo_printValue(args[i]);
-        printf(" ");
-    }
-    printf("\n");
-    return PICCOLO_NIL_VAL();
-}
-
-static piccolo_Value clockNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
-    return PICCOLO_NUM_VAL((double)clock() / CLOCKS_PER_SEC);
-}
-
-
-static piccolo_Value printAllocs(struct piccolo_Engine* engine, int argc, piccolo_Value* args) {
-#ifdef PICCOLO_ENABLE_MEMORY_TRACKER
-    piccolo_printMemAllocs(engine);
-#endif
-    return PICCOLO_NIL_VAL();
-}
-
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     piccolo_initValueArray(&package->globals);
     piccolo_initVariableArray(&package->globalVars);
     piccolo_initBytecode(&package->bytecode);
+    package->source = NULL;
+}
+
+struct piccolo_Package* piccolo_createPackage(struct piccolo_Engine* engine) {
+    struct piccolo_Package* package = piccolo_newPackage(engine);
+    piccolo_writePackageArray(engine, &engine->packages, package);
+    initPackage(engine, package);
+    return package;
 }
 
 struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const char* filepath) {
-    struct piccolo_Package* package = &engine->package;
+    struct piccolo_Package* package = piccolo_createPackage(engine);
     initPackage(engine, package);
+
+    package->packageName = filepath;
 
     package->source = piccolo_readFile(filepath);
     if(package->source == NULL) {
         piccolo_enginePrintError(engine, "Could not load package %s\n", filepath);
         return package;
     }
-
-    piccolo_defineGlobal(engine, package, "print", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, printNative)));
-    piccolo_defineGlobal(engine, package, "clock", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, clockNative)));
-    piccolo_defineGlobal(engine, package, "printAllocs", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, printAllocs)));
 
     if(!piccolo_compilePackage(engine, package)) {
         piccolo_enginePrintError(engine, "Compilation error.\n");
@@ -73,5 +55,6 @@ void piccolo_freePackage(struct piccolo_Engine* engine, struct piccolo_Package* 
             PICCOLO_REALLOCATE("var name free", engine, package->globalVars.values[i].name, package->globalVars.values[i].nameLen + 1, 0);
     piccolo_freeVariableArray(engine, &package->globalVars);
     piccolo_freeBytecode(engine, &package->bytecode);
-    free(package->source);
+    if(package->source != NULL)
+        free(package->source);
 }

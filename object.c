@@ -1,6 +1,8 @@
 
 #include "object.h"
 #include "util/memory.h"
+#include "engine.h"
+#include "package.h"
 #include <string.h>
 
 static struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjType type, size_t size) {
@@ -104,7 +106,11 @@ struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, str
 
 struct piccolo_ObjNativeFn* piccolo_makeNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args)) {
     struct piccolo_ObjNativeFn* nativeFn = ALLOCATE_OBJ(engine, struct piccolo_ObjNativeFn, PICCOLO_OBJ_NATIVE_FN);
-    nativeFn->obj.type = PICCOLO_OBJ_NATIVE_FN;
     nativeFn->native = native;
     return nativeFn;
+}
+
+struct piccolo_Package* piccolo_newPackage(struct piccolo_Engine* engine) {
+    struct piccolo_Package* package = ALLOCATE_OBJ(engine, struct piccolo_Package, PICCOLO_OBJ_PACKAGE);
+    return package;
 }

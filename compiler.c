@@ -171,6 +171,35 @@ static void compileRange(COMPILE_PARAMETERS) {
     }
 }
 
+static void compileImport(COMPILE_PARAMETERS) {
+    if(compiler->current.type == PICCOLO_TOKEN_IMPORT) {
+        advanceCompiler(engine, compiler);
+        int charIdx = compiler->current.charIdx;
+        if(compiler->current.type != PICCOLO_TOKEN_STRING) {
+            compilationError(engine, compiler, "Expected package name.");
+            advanceCompiler(engine, compiler);
+            return;
+        }
+        int packageSlot = -1;
+        for(int i = 0; i < engine->packages.count; i++) {
+            if(strlen(engine->packages.values[i]->packageName) == compiler->current.length - 2) {
+                if(memcmp(engine->packages.values[i]->packageName, compiler->current.start + 1, compiler->current.length - 2) == 0) {
+                    packageSlot = i;
+                    break;
+                }
+            }
+        }
+        if(packageSlot == -1) {
+            compilationError(engine, compiler, "Cannot find package %.*s.", compiler->current.length, compiler->current.start);
+        } else {
+            piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(engine->packages.values[packageSlot]), charIdx);
+        }
+        advanceCompiler(engine, compiler);
+        return;
+    }
+    compileRange(COMPILE_ARGUMENTS);
+}
+
 static void compileFnLiteral(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_FN) {
         int charIdx = compiler->current.charIdx;
@@ -241,7 +270,7 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
         freeCompiler(engine, &functionCompiler);
         return;
     }
-    compileRange(COMPILE_ARGUMENTS);
+    compileImport(COMPILE_ARGUMENTS);
 }
 
 static void compileVarLookup(COMPILE_PARAMETERS) {

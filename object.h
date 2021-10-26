@@ -2,8 +2,8 @@
 #ifndef PICCOLO_OBJECT_H
 #define PICCOLO_OBJECT_H
 
+#include "value.h"
 #include "bytecode.h"
-#include "engine.h"
 
 enum piccolo_ObjType {
     PICCOLO_OBJ_STRING,
@@ -11,7 +11,8 @@ enum piccolo_ObjType {
     PICCOLO_OBJ_FUNC,
     PICCOLO_OBJ_UPVAL,
     PICCOLO_OBJ_CLOSURE,
-    PICCOLO_OBJ_NATIVE_FN
+    PICCOLO_OBJ_NATIVE_FN,
+    PICCOLO_OBJ_PACKAGE,
 };
 
 struct piccolo_Obj {
@@ -65,5 +66,6 @@ struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine);
 struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo_Value* ptr);
 struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, struct piccolo_ObjFunction* function, int upvals);
 struct piccolo_ObjNativeFn* piccolo_makeNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args));
+struct piccolo_Package* piccolo_newPackage(struct piccolo_Engine* engine);
 
 #endif

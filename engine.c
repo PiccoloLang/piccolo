@@ -10,6 +10,8 @@
 #include "object.h"
 #include "gc.h"
 
+PICCOLO_DYNARRAY_IMPL(struct piccolo_Package*, Package)
+
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list)) {
     engine->printError = printError;
     engine->stackTop = engine->stack;
@@ -17,13 +19,16 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     engine->liveMemory = 0;
     engine->gcThreshold = 1024 * 64;
     engine->objs = NULL;
+    piccolo_initPackageArray(&engine->packages);
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     engine->track = NULL;
 #endif
 }
 
 void piccolo_freeEngine(struct piccolo_Engine* engine) {
-    piccolo_freePackage(engine, &engine->package);
+    for(int i = 0; i < engine->packages.count; i++)
+        piccolo_freePackage(engine, engine->packages.values[i]);
+    piccolo_freePackageArray(engine, &engine->packages);
     struct piccolo_Obj* curr = engine->objs;
     while(curr != NULL) {
         struct piccolo_Obj* toFree = curr;
@@ -299,6 +304,29 @@ static bool run(struct piccolo_Engine* engine) {
                                 break;
                             }
                             piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(array->array.values + idxNum));
+                            break;
+                        }
+                        case PICCOLO_OBJ_PACKAGE: {
+                            struct piccolo_Package* package = (struct piccolo_Package*)containerObj;
+                            if(!PICCOLO_IS_OBJ(idx) || PICCOLO_AS_OBJ(idx)->type != PICCOLO_OBJ_STRING) {
+                                piccolo_runtimeError(engine, "Package variable name must be a string.");
+                                break;
+                            }
+                            struct piccolo_ObjString* varname = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(idx);
+                            bool found = false;
+                            for(int i = 0; i < package->globalVars.count; i++) {
+                                if(varname->len == package->globalVars.values[i].nameLen) {
+                                    if(strcmp(varname->string, package->globalVars.values[i].name) == 0) {
+                                        int slot = package->globalVars.values[i].slot;
+                                        piccolo_enginePushStack(engine, package->globals.values[slot]);
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if(!found) {
+                                piccolo_runtimeError(engine, "Global variable %.*s does not exists in package %s", varname->len, varname->string, package->packageName);
+                            }
                             break;
                         }
                         default:

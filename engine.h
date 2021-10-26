@@ -3,10 +3,9 @@
 #define PICCOLO_ENGINE_H
 
 #include "package.h"
-
+#include "object.h"
 #include <stdarg.h>
 #include <stdbool.h>
-#include "object.h"
 
 struct piccolo_CallFrame {
     piccolo_Value varStack[256];
@@ -16,8 +15,10 @@ struct piccolo_CallFrame {
     struct piccolo_ObjClosure* closure;
 };
 
+PICCOLO_DYNARRAY_HEADER(struct piccolo_Package*, Package)
+
 struct piccolo_Engine {
-    struct piccolo_Package package;
+    struct piccolo_PackageArray packages;
 
     struct piccolo_Package* currentPackage;
     piccolo_Value stack[256];

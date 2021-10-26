@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "value.h"
 #include "object.h"
+#include "package.h"
 
 PICCOLO_DYNARRAY_IMPL(piccolo_Value, Value)
 
@@ -25,6 +26,10 @@ static void printObject(struct piccolo_Obj* obj) {
     }
     if(obj->type == PICCOLO_OBJ_CLOSURE) {
         printf("<fn>");
+    }
+    if(obj->type == PICCOLO_OBJ_PACKAGE) {
+        struct piccolo_Package* package = ((struct piccolo_Package*)obj);
+        printf("<package \"%s\">", package->packageName);
     }
 }
 
@@ -74,6 +79,8 @@ char* piccolo_getTypeName(piccolo_Value value) {
             return "fn";
         if(type == PICCOLO_OBJ_NATIVE_FN)
             return "native fn";
+        if(type == PICCOLO_OBJ_PACKAGE)
+            return "package";
     }
     return "Unknown";
 }
