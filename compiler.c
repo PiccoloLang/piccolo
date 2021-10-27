@@ -351,8 +351,23 @@ static void compileIndexing(COMPILE_PARAMETERS) {
     }
 }
 
-static void compileFnCall(COMPILE_PARAMETERS) {
+static void compileDot(COMPILE_PARAMETERS) {
     compileIndexing(COMPILE_ARGUMENTS);
+    while(compiler->current.type == PICCOLO_TOKEN_DOT) {
+        advanceCompiler(engine, compiler);
+        int charIdx = compiler->current.charIdx;
+        if(compiler->current.type != PICCOLO_TOKEN_IDENTIFIER) {
+            compilationError(engine, compiler, "Expected identifier.");
+        }
+        struct piccolo_ObjString* idx = piccolo_copyString(engine, compiler->current.start, compiler->current.length);
+        advanceCompiler(engine, compiler);
+        piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(idx), charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_IDX, charIdx);
+    }
+}
+
+static void compileFnCall(COMPILE_PARAMETERS) {
+    compileDot(COMPILE_ARGUMENTS);
     while(compiler->current.type == PICCOLO_TOKEN_LEFT_PAREN) {
         int charIdx = compiler->current.charIdx;
         advanceCompiler(engine, compiler);
