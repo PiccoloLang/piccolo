@@ -13,6 +13,7 @@ struct piccolo_CallFrame {
     int ip;
     struct piccolo_Bytecode* bytecode;
     struct piccolo_ObjClosure* closure;
+    struct piccolo_Package* package;
 };
 
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Package*, Package)
@@ -20,7 +21,6 @@ PICCOLO_DYNARRAY_HEADER(struct piccolo_Package*, Package)
 struct piccolo_Engine {
     struct piccolo_PackageArray packages;
 
-    struct piccolo_Package* currentPackage;
     piccolo_Value stack[256];
     piccolo_Value* stackTop;
     struct piccolo_CallFrame frames[256];

@@ -41,6 +41,8 @@ typedef enum {
     PICCOLO_OP_GET_LEN,
 
     PICCOLO_OP_EVAPORATE_PTR,
+
+    PICCOLO_OP_EXECUTE_PACKAGE
 } piccolo_OpCode;
 
 PICCOLO_DYNARRAY_HEADER(uint8_t, Byte)

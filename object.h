@@ -45,11 +45,14 @@ struct piccolo_ObjUpval {
     struct piccolo_ObjUpval* next;
 };
 
+struct piccolo_Package;
+
 struct piccolo_ObjClosure {
     struct piccolo_Obj obj;
     struct piccolo_ObjUpval** upvals;
     int upvalCnt;
     struct piccolo_ObjFunction* prototype;
+    struct piccolo_Package* package;
 };
 
 struct piccolo_ObjNativeFn {

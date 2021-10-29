@@ -12,6 +12,7 @@
 #include "util/strutil.h"
 #include "value.h"
 #include "object.h"
+#include "util/file.h"
 
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Variable, Variable)
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Upvalue, Upvalue)
@@ -100,10 +101,21 @@ static int resolveUpvalue(struct piccolo_Engine* engine, struct piccolo_Compiler
     return slot;
 }
 
-#define COMPILE_PARAMETERS struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode, bool requireValue, bool global
-#define COMPILE_ARGUMENTS engine, compiler, bytecode, requireValue, global
-#define COMPILE_ARGUMENTS_REQ_VAL engine, compiler, bytecode, true, global
-#define COMPILE_ARGUMENTS_NO_VAL engine, compiler, bytecode, false, global
+static int getPackageSlot(struct piccolo_Engine* engine, const char* name, size_t nameSize) {
+    for(int i = 0; i < engine->packages.count; i++) {
+        if(strlen(engine->packages.values[i]->packageName) == nameSize) {
+            if(memcmp(engine->packages.values[i]->packageName, name, nameSize) == 0) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+#define COMPILE_PARAMETERS struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode, bool requireValue, bool global, struct piccolo_Package* package
+#define COMPILE_ARGUMENTS engine, compiler, bytecode, requireValue, global, package
+#define COMPILE_ARGUMENTS_REQ_VAL engine, compiler, bytecode, true, global, package
+#define COMPILE_ARGUMENTS_NO_VAL engine, compiler, bytecode, false, global, package
 
 static void compileExpr(COMPILE_PARAMETERS);
 
@@ -180,20 +192,31 @@ static void compileImport(COMPILE_PARAMETERS) {
             advanceCompiler(engine, compiler);
             return;
         }
-        int packageSlot = -1;
-        for(int i = 0; i < engine->packages.count; i++) {
-            if(strlen(engine->packages.values[i]->packageName) == compiler->current.length - 2) {
-                if(memcmp(engine->packages.values[i]->packageName, compiler->current.start + 1, compiler->current.length - 2) == 0) {
-                    packageSlot = i;
-                    break;
-                }
-            }
-        }
+        const char* packageName = compiler->current.start + 1;
+        size_t packageNameLen = compiler->current.length - 2;
+        int packageSlot = getPackageSlot(engine, packageName, packageNameLen);
+
+        struct piccolo_Package* importedPackage = NULL;
+
         if(packageSlot == -1) {
-            compilationError(engine, compiler, "Cannot find package %.*s.", compiler->current.length, compiler->current.start);
+            char filepath[1024];
+            piccolo_applyRelativePathToFilePath(filepath, packageName, packageNameLen, package->packageName);
+            size_t pathLen = strlen(filepath) + 1;
+            packageSlot = getPackageSlot(engine, filepath, pathLen - 1);
+            if(packageSlot == -1) {
+                const char* path = malloc(pathLen + 1);
+                strcpy(path, filepath);
+                importedPackage = piccolo_loadPackage(engine, path);
+            } else {
+                importedPackage = engine->packages.values[packageSlot];
+            }
         } else {
-            piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(engine->packages.values[packageSlot]), charIdx);
+            importedPackage = engine->packages.values[packageSlot];
         }
+
+        piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(importedPackage), charIdx);
+        if(importedPackage->compiled)
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_EXECUTE_PACKAGE, charIdx);
         advanceCompiler(engine, compiler);
         return;
     }
@@ -249,7 +272,7 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
         functionCompiler.hadError = false;
         functionCompiler.enclosing = compiler;
 
-        compileExpr(engine, &functionCompiler, &function->bytecode, true, false);
+        compileExpr(engine, &functionCompiler, &function->bytecode, true, false, package);
         piccolo_writeBytecode(engine, &function->bytecode, PICCOLO_OP_RETURN, 1);
 
         if(functionCompiler.hadError)
@@ -720,6 +743,12 @@ static void compileFor(COMPILE_PARAMETERS) {
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SWAP_STACK, charIdx);
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
 
+        if(requireValue || compiler->current.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+
+        } else {
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+        }
+
         compiler->locals.count--;
 
         return;
@@ -741,7 +770,7 @@ static void compileBlock(COMPILE_PARAMETERS) {
                     compilationError(engine, compiler, "Expected }.");
                     break;
                 }
-                compileFor(engine, compiler, bytecode, false, false);
+                compileFor(engine, compiler, bytecode, false, false, package);
             }
             advanceCompiler(engine, compiler);
             int charIdx = compiler->current.charIdx;
@@ -772,8 +801,9 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     initCompiler(engine, &compiler, package->source, false);
     compiler.globals = &package->globalVars;
     compiler.enclosing = NULL;
+    package->compiled = true;
 
-    compileExpr(engine, &compiler, &package->bytecode, false, true);
+    compileExpr(engine, &compiler, &package->bytecode, false, true, package);
     if(compiler.current.type != PICCOLO_TOKEN_EOF) {
         compilationError(engine, &compiler, "Expected EOF.");
     }

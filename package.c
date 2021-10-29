@@ -7,13 +7,14 @@
 #include "compiler.h"
 #include "util/file.h"
 #include "object.h"
-#include "time.h"
 #include "util/memory.h"
 
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     piccolo_initValueArray(&package->globals);
     piccolo_initVariableArray(&package->globalVars);
     piccolo_initBytecode(&package->bytecode);
+    package->compiled = false;
+    package->executed = false;
     package->source = NULL;
 }
 
@@ -41,10 +42,10 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
         return package;
     }
 
-    if(!piccolo_executePackage(engine, package)) {
-        piccolo_enginePrintError(engine, "Runtime error.\n");
-        return package;
-    }
+//    if(!piccolo_executePackage(engine, package)) {
+//        piccolo_enginePrintError(engine, "Runtime error.\n");
+//        return package;
+//    }
     return package;
 }
 

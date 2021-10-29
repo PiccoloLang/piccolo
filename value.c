@@ -3,6 +3,7 @@
 #include "value.h"
 #include "object.h"
 #include "package.h"
+#include "debug/disassembler.h"
 
 PICCOLO_DYNARRAY_IMPL(piccolo_Value, Value)
 
