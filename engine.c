@@ -478,6 +478,12 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(engine->frames[engine->currFrame].closure->upvals[slot]->valPtr));
                 break;
             }
+            case PICCOLO_OP_APPEND: {
+                piccolo_Value val = piccolo_enginePopStack(engine);
+                struct piccolo_ObjArray* arr = PICCOLO_AS_OBJ(piccolo_enginePeekStack(engine, 1));
+                piccolo_writeValueArray(engine, &arr->array, val);
+                break;
+            }
             case PICCOLO_OP_CLOSE_UPVALS: {
                 while(engine->openUpvals != NULL) {
                     struct piccolo_ObjUpval* upval = engine->openUpvals;

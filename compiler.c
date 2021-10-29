@@ -724,8 +724,7 @@ static void compileFor(COMPILE_PARAMETERS) {
         compileExpr(COMPILE_ARGUMENTS_REQ_VAL); // Loop val
 
         if(requireValue || compiler->current.type == PICCOLO_TOKEN_RIGHT_BRACE) {
-            piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 1, charIdx);
-            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_ADD, charIdx);
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_APPEND, charIdx);
         } else {
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
         }
