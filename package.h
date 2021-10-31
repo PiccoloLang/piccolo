@@ -17,7 +17,7 @@ struct piccolo_Package {
     struct piccolo_ValueArray globals;
     struct piccolo_GlobalTable globalIdxs;
     const char* packageName;
-    bool compiled, executed;
+    bool compiled, executed, compilationError;
 };
 
 struct piccolo_Package* piccolo_createPackage(struct piccolo_Engine* engine);

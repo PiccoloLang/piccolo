@@ -812,6 +812,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     freeCompiler(engine, &compiler);
 
     piccolo_writeBytecode(engine, &package->bytecode, PICCOLO_OP_RETURN, 1);
+    package->compilationError = compiler.hadError;
     return !compiler.hadError;
 }
 
