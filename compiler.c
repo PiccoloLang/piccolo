@@ -54,6 +54,7 @@ static void advanceCompiler(struct piccolo_Engine* engine, struct piccolo_Compil
 static void initCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, char* source, bool skipScanner) {
     if(!skipScanner)
         piccolo_initScanner(compiler->scanner, source);
+    piccolo_initVariableArray(&compiler->globals);
     piccolo_initVariableArray(&compiler->locals);
     piccolo_initUpvalueArray(&compiler->upvals);
     if(!skipScanner)
@@ -299,7 +300,7 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
 static void compileVarLookup(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_IDENTIFIER) {
         struct piccolo_Token varName = compiler->current;
-        int globalSlot = getVarSlot(compiler->globals, varName);
+        int globalSlot = getVarSlot(&compiler->globals, varName);
         if(globalSlot == -1) {
             int localSlot = getVarSlot(&compiler->locals, varName);
             if(localSlot == -1) {
@@ -542,11 +543,11 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
             compilationError(engine, compiler, "Expected variable name.");
         } else {
             if(global) {
-                slot = getVarSlot(compiler->globals, varName);
+                slot = getVarSlot(&compiler->globals, varName);
                 if(slot != -1) {
                     compilationError(engine, compiler, "Variable %.*s already defined.", varName.length, varName.start);
                 } else {
-                    slot = compiler->globals->count;
+                    slot = compiler->globals.count;
                     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_GET_GLOBAL, slot, varName.charIdx);
                 }
             } else {
@@ -575,7 +576,9 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
             variable.name = varName.start;
             variable.nameLen = varName.length;
             variable.nameInSource = true;
-            piccolo_writeVariableArray(engine, compiler->globals, variable);
+            piccolo_writeVariableArray(engine, &compiler->globals, variable);
+            struct piccolo_ObjString* name = piccolo_copyString(engine, varName.start, varName.length);
+            piccolo_setGlobalTable(engine, &package->globalIdxs, name, slot);
         } else {
             struct piccolo_Variable variable;
             variable.slot = slot;
@@ -798,7 +801,6 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     struct piccolo_Scanner scanner;
     compiler.scanner = &scanner;
     initCompiler(engine, &compiler, package->source, false);
-    compiler.globals = &package->globalVars;
     compiler.enclosing = NULL;
     package->compiled = true;
 

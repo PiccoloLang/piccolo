@@ -2,6 +2,7 @@
 #include "package.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "engine.h"
 #include "compiler.h"
@@ -9,9 +10,19 @@
 #include "object.h"
 #include "util/memory.h"
 
+uint32_t piccolo_hashGlobalTableKey(struct piccolo_ObjString* key) {
+    return key->hash;
+}
+
+bool piccolo_compareGlobalTableKeys(struct piccolo_ObjString* a, struct piccolo_ObjString* b) {
+    return strcmp(a->string, b->string) == 0;
+}
+
+PICCOLO_HASHMAP_IMPL(struct piccolo_ObjString*, int, GlobalTable, NULL, -1)
+
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     piccolo_initValueArray(&package->globals);
-    piccolo_initVariableArray(&package->globalVars);
+    piccolo_initGlobalTable(&package->globalIdxs);
     piccolo_initBytecode(&package->bytecode);
     package->compiled = false;
     package->executed = false;
@@ -42,19 +53,12 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
         return package;
     }
 
-//    if(!piccolo_executePackage(engine, package)) {
-//        piccolo_enginePrintError(engine, "Runtime error.\n");
-//        return package;
-//    }
     return package;
 }
 
 void piccolo_freePackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     piccolo_freeValueArray(engine, &package->globals);
-    for(int i = 0; i < package->globalVars.count; i++)
-        if(!package->globalVars.values[i].nameInSource)
-            PICCOLO_REALLOCATE("var name free", engine, package->globalVars.values[i].name, package->globalVars.values[i].nameLen + 1, 0);
-    piccolo_freeVariableArray(engine, &package->globalVars);
+    piccolo_freeGlobalTable(engine, &package->globalIdxs);
     piccolo_freeBytecode(engine, &package->bytecode);
     if(package->source != NULL)
         free(package->source);

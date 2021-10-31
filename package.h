@@ -4,15 +4,18 @@
 
 #include "compiler.h"
 #include "util/dynarray.h"
+#include "util/hashmap.h"
 #include "object.h"
 #include "bytecode.h"
+
+PICCOLO_HASHMAP_HEADER(struct piccolo_ObjString*, int, GlobalTable)
 
 struct piccolo_Package {
     struct piccolo_Obj obj;
     struct piccolo_Bytecode bytecode;
     const char* source;
     struct piccolo_ValueArray globals;
-    struct piccolo_VariableArray globalVars;
+    struct piccolo_GlobalTable globalIdxs;
     const char* packageName;
     bool compiled, executed;
 };

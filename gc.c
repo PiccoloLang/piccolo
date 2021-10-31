@@ -46,6 +46,9 @@ static void markPackage(struct piccolo_Package* package) {
         markValue(package->bytecode.constants.values[i]);
     for(int i = 0; i < package->globals.count; i++)
         markValue(package->globals.values[i]);
+    for(int i = 0; i < package->globalIdxs.capacity; i++)
+        if(package->globalIdxs.entries[i].key != NULL)
+            package->globalIdxs.entries[i].key->obj.marked = true;
 }
 
 static void markRoots(struct piccolo_Engine* engine) {

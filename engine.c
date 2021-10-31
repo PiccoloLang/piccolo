@@ -310,23 +310,15 @@ static bool run(struct piccolo_Engine* engine) {
                         case PICCOLO_OBJ_PACKAGE: {
                             struct piccolo_Package* package = (struct piccolo_Package*)containerObj;
                             if(!PICCOLO_IS_OBJ(idx) || PICCOLO_AS_OBJ(idx)->type != PICCOLO_OBJ_STRING) {
-                                piccolo_runtimeError(engine, "Package variable name must be a string.");
+                                piccolo_runtimeError(engine, "Global variable name must be a string.");
                                 break;
                             }
                             struct piccolo_ObjString* varname = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(idx);
-                            bool found = false;
-                            for(int i = 0; i < package->globalVars.count; i++) {
-                                if(varname->len == package->globalVars.values[i].nameLen) {
-                                    if(memcmp(varname->string, package->globalVars.values[i].name, varname->len) == 0) {
-                                        int slot = package->globalVars.values[i].slot;
-                                        piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(&package->globals.values[slot]));
-                                        found = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if(!found) {
+                            int globalIdx = piccolo_getGlobalTable(engine, &package->globalIdxs, varname);
+                            if(globalIdx == -1) {
                                 piccolo_runtimeError(engine, "Global variable %.*s does not exists in package %s", varname->len, varname->string, package->packageName);
+                            } else {
+                                piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(&package->globals.values[globalIdx]));
                             }
                             break;
                         }

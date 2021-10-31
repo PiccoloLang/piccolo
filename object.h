@@ -25,6 +25,7 @@ struct piccolo_ObjString {
     struct piccolo_Obj obj;
     const char* string;
     int len;
+    uint32_t hash;
 };
 
 struct piccolo_ObjArray {

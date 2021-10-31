@@ -54,10 +54,20 @@ void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj) {
     PICCOLO_REALLOCATE("free obj", engine, obj, objSize, 0);
 }
 
+static uint32_t hashString(const char* string, int length) {
+    uint32_t hash = 2166136261u;
+    for (int i = 0; i < length; i++) {
+        hash ^= (uint8_t)string[i];
+        hash *= 16777619;
+    }
+    return hash;
+}
+
 static struct piccolo_ObjString* newString(struct piccolo_Engine* engine, const char* string, int len) {
     struct piccolo_ObjString* result = ALLOCATE_OBJ(engine, struct piccolo_ObjString, PICCOLO_OBJ_STRING);
     result->string = string;
     result->len = len;
+    result->hash = hashString(string, len);
     return result;
 }
 
