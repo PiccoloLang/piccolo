@@ -28,7 +28,7 @@ static piccolo_Value clockNative(struct piccolo_Engine* engine, int argc, struct
     return PICCOLO_NUM_VAL(time);
 }
 
-static struct piccolo_Value sleepNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+static piccolo_Value sleepNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
     if(argc != 1) {
         piccolo_runtimeError(engine, "Wrong argument count.");
     } else {
@@ -48,4 +48,26 @@ void piccolo_addTimeLib(struct piccolo_Engine* engine) {
     time->packageName = "time";
     piccolo_defineGlobal(engine, time, "clock", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, clockNative)));
     piccolo_defineGlobal(engine, time, "sleep", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sleepNative)));
+}
+
+#include "../debug/disassembler.h"
+static piccolo_Value disassembleFunction(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+    if(argc != 1) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+    } else {
+        piccolo_Value val = args[0];
+        if(!PICCOLO_IS_OBJ(val) || PICCOLO_AS_OBJ(val)->type != PICCOLO_OBJ_CLOSURE) {
+            piccolo_runtimeError(engine, "Cannot dissasemble %s.", piccolo_getTypeName(val));
+        } else {
+            struct piccolo_ObjClosure* function = PICCOLO_AS_OBJ(val);
+            piccolo_disassembleBytecode(&function->prototype->bytecode);
+        }
+    }
+    return PICCOLO_NIL_VAL();
+}
+
+void piccolo_addDebugLib(struct piccolo_Engine* engine) {
+    struct piccolo_Package* debug = piccolo_createPackage(engine);
+    debug->packageName = "debug";
+    piccolo_defineGlobal(engine, debug, "disassemble", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, disassembleFunction)));
 }

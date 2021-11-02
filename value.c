@@ -47,9 +47,6 @@ void piccolo_printValue(piccolo_Value value) {
         printf(PICCOLO_AS_BOOL(value) ? "true" : "false");
         return;
     }
-    if(PICCOLO_IS_PTR(value)) {
-        printf("<ptr>");
-    }
     if(PICCOLO_IS_OBJ(value)) {
         printObject(PICCOLO_AS_OBJ(value));
     }
@@ -64,9 +61,6 @@ char* piccolo_getTypeName(piccolo_Value value) {
     }
     if(PICCOLO_IS_BOOL(value)) {
         return "bool";
-    }
-    if(PICCOLO_IS_PTR(value)) {
-        return "ptr";
     }
     if(PICCOLO_IS_OBJ(value)) {
         enum piccolo_ObjType type = PICCOLO_AS_OBJ(value)->type;

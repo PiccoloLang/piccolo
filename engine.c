@@ -38,9 +38,46 @@ void piccolo_freeEngine(struct piccolo_Engine* engine) {
     }
 }
 
-static void evaporatePointer(piccolo_Value* value) {
-    while(PICCOLO_IS_PTR((*value)))
-        *value = *PICCOLO_AS_PTR((*value));
+static piccolo_Value* getPtrToIdx(struct piccolo_Engine* engine, struct piccolo_Obj* container, piccolo_Value idx) {
+    switch(container->type) {
+        case PICCOLO_OBJ_ARRAY: {
+            struct piccolo_ObjArray* array = (struct piccolo_ObjArray*)container;
+            if(!PICCOLO_IS_NUM(idx)) {
+                piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
+                return NULL;
+            }
+            int idxNum = PICCOLO_AS_NUM(idx);
+            if(idxNum < 0 || idxNum >= array->array.count) {
+                piccolo_runtimeError(engine, "Array index out of bounds.");
+                return NULL;
+            }
+            return &array->array.values[idxNum];
+        }
+        case PICCOLO_OBJ_PACKAGE: {
+            struct piccolo_Package* package = (struct piccolo_Package*)container;
+            if(!PICCOLO_IS_OBJ(idx) || PICCOLO_AS_OBJ(idx)->type != PICCOLO_OBJ_STRING) {
+                piccolo_runtimeError(engine, "Global variable name must be a string.");
+                return NULL;
+                break;
+            }
+            struct piccolo_ObjString* varname = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(idx);
+            int globalIdx = piccolo_getGlobalTable(engine, &package->globalIdxs, varname);
+            if(globalIdx == -1) {
+                piccolo_runtimeError(engine, "Global variable %.*s does not exists in package %s", varname->len, varname->string, package->packageName);
+                return NULL;
+            } else {
+                return &package->globals.values[globalIdx];
+            }
+        }
+        default: {
+            piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(PICCOLO_OBJ_VAL(container)));
+            return NULL;
+        }
+    }
+}
+
+static bool shouldCloseUpval(struct piccolo_Engine* engine, struct piccolo_ObjUpval* upval) {
+    return upval->valPtr >= engine->frames[engine->currFrame].varStack && upval->valPtr < engine->frames[engine->currFrame].varStack + 256;
 }
 
 static bool run(struct piccolo_Engine* engine) {
@@ -49,14 +86,13 @@ static bool run(struct piccolo_Engine* engine) {
     engine->hadError = false;
     while(true) {
         engine->frames[engine->currFrame].prevIp = engine->frames[engine->currFrame].ip;
-        uint8_t opcode = READ_BYTE();
+        piccolo_OpCode opcode = READ_BYTE();
         switch(opcode) {
             case PICCOLO_OP_RETURN:
                 engine->currFrame--;
                 if(engine->currFrame == -1)
                     return true;
                 engine->frames[engine->currFrame].prevIp = engine->frames[engine->currFrame].ip;
-                evaporatePointer(engine->stackTop - 1);
                 break;
             case PICCOLO_OP_CONST: {
                 piccolo_enginePushStack(engine, engine->frames[engine->currFrame].bytecode->constants.values[READ_PARAM()]);
@@ -65,8 +101,6 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_ADD: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                evaporatePointer(&a);
-                evaporatePointer(&b);
                 if(PICCOLO_IS_NUM(a) && PICCOLO_IS_NUM(b)) {
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(PICCOLO_AS_NUM(b) + PICCOLO_AS_NUM(a)));
                     break;
@@ -101,8 +135,6 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_SUB: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                evaporatePointer(&a);
-                evaporatePointer(&b);
                 if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot subtract %s from %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
                     break;
@@ -113,8 +145,6 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_MUL: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                evaporatePointer(&a);
-                evaporatePointer(&b);
                 if(PICCOLO_IS_NUM(a) && PICCOLO_IS_NUM(b)) {
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(PICCOLO_AS_NUM(b) * PICCOLO_AS_NUM(a)));
                     break;
@@ -164,8 +194,6 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_DIV: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                evaporatePointer(&a);
-                evaporatePointer(&b);
                 if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot divide %s by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                     break;
@@ -176,8 +204,6 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_MOD: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                evaporatePointer(&a);
-                evaporatePointer(&b);
                 if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot get remainder of %s divided by %s.", piccolo_getTypeName(b), piccolo_getTypeName(a));
                     break;
@@ -193,9 +219,7 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_EQUAL: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
-                evaporatePointer(&a);
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                evaporatePointer(&b);
                 if(PICCOLO_IS_NUM(a) && PICCOLO_IS_NUM(b)) {
                     piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(PICCOLO_AS_NUM(a) == PICCOLO_AS_NUM(b)));
                     break;
@@ -225,9 +249,7 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_GREATER: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
-                evaporatePointer(&a);
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                evaporatePointer(&b);
                 if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot compare %s and %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
                     break;
@@ -237,7 +259,6 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_NOT: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
-                evaporatePointer(&val);
                 if(!PICCOLO_IS_BOOL(val)) {
                     piccolo_runtimeError(engine, "Cannot negate %s.", piccolo_getTypeName(val));
                     break;
@@ -247,9 +268,7 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_LESS: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
-                evaporatePointer(&a);
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                evaporatePointer(&b);
                 if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot compare %s and %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
                 }
@@ -261,16 +280,13 @@ static bool run(struct piccolo_Engine* engine) {
                 struct piccolo_ObjArray* array = piccolo_newArray(engine, len);
                 for(int i = len - 1; i >= 0; i--) {
                     array->array.values[i] = piccolo_enginePopStack(engine);
-                    evaporatePointer(&array->array.values[i]);
                 }
                 piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(array));
                 break;
             }
             case PICCOLO_OP_CREATE_RANGE: {
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                evaporatePointer(&b);
                 piccolo_Value a = piccolo_enginePopStack(engine);
-                evaporatePointer(&a);
                 if(!PICCOLO_IS_NUM(a) || !PICCOLO_IS_NUM(b)) {
                     piccolo_runtimeError(engine, "Cannot create range between %s and %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
                     break;
@@ -285,47 +301,30 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_GET_IDX: {
                 piccolo_Value idx = piccolo_enginePopStack(engine);
-                evaporatePointer(&idx);
                 piccolo_Value container = piccolo_enginePopStack(engine);
-                evaporatePointer(&container);
                 if(!PICCOLO_IS_OBJ(container)) {
                     piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
                 } else {
                     struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
-                    switch(containerObj->type) {
-                        case PICCOLO_OBJ_ARRAY: {
-                            struct piccolo_ObjArray* array = (struct piccolo_ObjArray*)containerObj;
-                            if(!PICCOLO_IS_NUM(idx)) {
-                                piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
-                                break;
-                            }
-                            int idxNum = PICCOLO_AS_NUM(idx);
-                            if(idxNum < 0 || idxNum >= array->array.count) {
-                                piccolo_runtimeError(engine, "Array index out of bounds.");
-                                break;
-                            }
-                            piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(array->array.values + idxNum));
-                            break;
-                        }
-                        case PICCOLO_OBJ_PACKAGE: {
-                            struct piccolo_Package* package = (struct piccolo_Package*)containerObj;
-                            if(!PICCOLO_IS_OBJ(idx) || PICCOLO_AS_OBJ(idx)->type != PICCOLO_OBJ_STRING) {
-                                piccolo_runtimeError(engine, "Global variable name must be a string.");
-                                break;
-                            }
-                            struct piccolo_ObjString* varname = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(idx);
-                            int globalIdx = piccolo_getGlobalTable(engine, &package->globalIdxs, varname);
-                            if(globalIdx == -1) {
-                                piccolo_runtimeError(engine, "Global variable %.*s does not exists in package %s", varname->len, varname->string, package->packageName);
-                            } else {
-                                piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(&package->globals.values[globalIdx]));
-                            }
-                            break;
-                        }
-                        default:
-                            piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
-                    }
+                    piccolo_Value* ptr = getPtrToIdx(engine, containerObj, idx);
+                    if(ptr != NULL)
+                        piccolo_enginePushStack(engine, *ptr);
                 }
+                break;
+            }
+            case PICCOLO_OP_SET_IDX: {
+                piccolo_Value val = piccolo_enginePopStack(engine);
+                piccolo_Value idx = piccolo_enginePopStack(engine);
+                piccolo_Value container = piccolo_enginePopStack(engine);
+                if(!PICCOLO_IS_OBJ(container)) {
+                    piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
+                } else {
+                    struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
+                    piccolo_Value* ptr = getPtrToIdx(engine, containerObj, idx);
+                    if(ptr != NULL)
+                        *ptr = val;
+                }
+                break;
                 break;
             }
             case PICCOLO_OP_POP_STACK: {
@@ -347,26 +346,26 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_GET_LOCAL: {
                 int slot = READ_PARAM();
-                piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(engine->frames[engine->currFrame].varStack + slot));
+                piccolo_enginePushStack(engine, engine->frames[engine->currFrame].varStack[slot]);
+                break;
+            }
+            case PICCOLO_OP_SET_LOCAL: {
+                int slot = READ_PARAM();
+                engine->frames[engine->currFrame].varStack[slot] = piccolo_enginePeekStack(engine, 1);
                 break;
             }
             case PICCOLO_OP_GET_GLOBAL: {
                 int slot = READ_PARAM();
                 while(engine->frames[engine->currFrame].package->globals.count <= slot)
                     piccolo_writeValueArray(engine, &engine->frames[engine->currFrame].package->globals, PICCOLO_NIL_VAL());
-                piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(engine->frames[engine->currFrame].package->globals.values + slot));
+                piccolo_enginePushStack(engine, engine->frames[engine->currFrame].package->globals.values[slot]);
                 break;
             }
-            case PICCOLO_OP_SET: {
-                piccolo_Value value = piccolo_enginePopStack(engine);
-                evaporatePointer(&value);
-                piccolo_Value ptr = piccolo_enginePopStack(engine);
-                if(!PICCOLO_IS_PTR(ptr)) {
-                    piccolo_runtimeError(engine, "Cannot assign to %s", piccolo_getTypeName(ptr));
-                    break;
-                }
-                *PICCOLO_AS_PTR(ptr) = value;
-                piccolo_enginePushStack(engine, value);
+            case PICCOLO_OP_SET_GLOBAL: {
+                int slot = READ_PARAM();
+                while(engine->frames[engine->currFrame].package->globals.count <= slot)
+                    piccolo_writeValueArray(engine, &engine->frames[engine->currFrame].package->globals, PICCOLO_NIL_VAL());
+                engine->frames[engine->currFrame].package->globals.values[slot] = piccolo_enginePeekStack(engine, 1);
                 break;
             }
             case PICCOLO_OP_JUMP: {
@@ -377,7 +376,6 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_JUMP_FALSE: {
                 int jumpDist = READ_PARAM();
                 piccolo_Value condition = piccolo_enginePopStack(engine);
-                evaporatePointer(&condition);
                 if(!PICCOLO_IS_BOOL(condition)) {
                     piccolo_runtimeError(engine, "Condition must be a boolean.");
                     break;
@@ -395,7 +393,6 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_REV_JUMP_FALSE: {
                 int jumpDist = READ_PARAM();
                 piccolo_Value condition = piccolo_enginePopStack(engine);
-                evaporatePointer(&condition);
                 if(!PICCOLO_IS_BOOL(condition)) {
                     piccolo_runtimeError(engine, "Condition must be a boolean.");
                     break;
@@ -410,10 +407,8 @@ static bool run(struct piccolo_Engine* engine) {
                 engine->currFrame++;
                 for(int i = argCount - 1; i >= 0; i--) {
                     engine->frames[engine->currFrame].varStack[i] = piccolo_enginePopStack(engine);
-                    evaporatePointer(&engine->frames[engine->currFrame].varStack[i]);
                 }
                 piccolo_Value func = piccolo_enginePopStack(engine);
-                evaporatePointer(&func);
 
                 if(engine->currFrame == 255) {
                     engine->currFrame--;
@@ -467,7 +462,12 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_GET_UPVAL: {
                 int slot = READ_PARAM();
-                piccolo_enginePushStack(engine, PICCOLO_PTR_VAL(engine->frames[engine->currFrame].closure->upvals[slot]->valPtr));
+                piccolo_enginePushStack(engine, *engine->frames[engine->currFrame].closure->upvals[slot]->valPtr);
+                break;
+            }
+            case PICCOLO_OP_SET_UPVAL: {
+                int slot = READ_PARAM();
+                *engine->frames[engine->currFrame].closure->upvals[slot]->valPtr = piccolo_enginePeekStack(engine, 1);
                 break;
             }
             case PICCOLO_OP_APPEND: {
@@ -477,29 +477,32 @@ static bool run(struct piccolo_Engine* engine) {
                 break;
             }
             case PICCOLO_OP_CLOSE_UPVALS: {
-                while(engine->openUpvals != NULL) {
-                    struct piccolo_ObjUpval* upval = engine->openUpvals;
-                    piccolo_Value* allocatedValue = PICCOLO_REALLOCATE("heap upval", engine, NULL, 0, sizeof(piccolo_Value));
-                    *allocatedValue = *upval->valPtr;
-                    upval->valPtr = allocatedValue;
-                    upval->open = false;
-                    engine->openUpvals = upval->next;
+                struct piccolo_ObjUpval* newOpen = NULL;
+                struct piccolo_ObjUpval* curr = engine->openUpvals;
+                while(curr != NULL) {
+                    struct piccolo_ObjUpval* next = curr->next;
+                    if(shouldCloseUpval(engine, curr)) {
+                        curr->open = false;
+                        piccolo_Value* heapUpval = PICCOLO_REALLOCATE("heap upval", engine, NULL, 0, sizeof(piccolo_Value));
+                        *heapUpval = *curr->valPtr;
+                        curr->valPtr = heapUpval;
+                    } else {
+                        curr->next = newOpen;
+                        newOpen = curr;
+                    }
+                    curr = next;
                 }
+                engine->openUpvals = newOpen;
                 break;
             }
             case PICCOLO_OP_GET_LEN: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
-                evaporatePointer(&val);
                 if(PICCOLO_IS_OBJ(val) && PICCOLO_AS_OBJ(val)->type == PICCOLO_OBJ_ARRAY) {
                     struct piccolo_ObjArray* arr = PICCOLO_AS_OBJ(val);
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(arr->array.count));
                     break;
                 }
                 piccolo_runtimeError(engine, "Cannot get length of %s.", piccolo_getTypeName(val));
-                break;
-            }
-            case PICCOLO_OP_EVAPORATE_PTR: {
-                evaporatePointer(engine->stackTop - 1);
                 break;
             }
             case PICCOLO_OP_EXECUTE_PACKAGE: {

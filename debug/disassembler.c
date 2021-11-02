@@ -44,10 +44,12 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         PARAM_INSTRUCTION(OP_CREATE_ARRAY)
         SIMPLE_INSTRUCTION(OP_CREATE_RANGE)
         SIMPLE_INSTRUCTION(OP_GET_IDX)
+        SIMPLE_INSTRUCTION(OP_SET_IDX)
 
         PARAM_INSTRUCTION(OP_GET_GLOBAL)
+        PARAM_INSTRUCTION(OP_SET_GLOBAL)
         PARAM_INSTRUCTION(OP_GET_LOCAL)
-        SIMPLE_INSTRUCTION(OP_SET)
+        PARAM_INSTRUCTION(OP_SET_LOCAL)
 
         PARAM_INSTRUCTION(OP_JUMP)
         PARAM_INSTRUCTION(OP_JUMP_FALSE)
@@ -65,12 +67,11 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
             return offset + 3 + 3 * upvals;
         }
         PARAM_INSTRUCTION(OP_GET_UPVAL)
+        PARAM_INSTRUCTION(OP_SET_UPVAL)
         SIMPLE_INSTRUCTION(OP_CLOSE_UPVALS)
 
         SIMPLE_INSTRUCTION(OP_GET_LEN)
         SIMPLE_INSTRUCTION(OP_APPEND)
-
-        SIMPLE_INSTRUCTION(OP_EVAPORATE_PTR)
 
         SIMPLE_INSTRUCTION(OP_EXECUTE_PACKAGE)
     }
