@@ -589,7 +589,7 @@ void piccolo_runtimeError(struct piccolo_Engine* engine, const char* format, ...
         lineNumberDigits++;
         lineNumber /= 10;
     }
-    piccolo_enginePrintError(engine, "%* ^", 9 + lineNumberDigits + engine->frames[engine->currFrame].package->source + charIdx - opLine.lineStart);
+    piccolo_enginePrintError(engine, "%*c ^", 9 + lineNumberDigits + engine->frames[engine->currFrame].package->source + charIdx - opLine.lineStart, ' ');
     piccolo_enginePrintError(engine, "\n");
 
     engine->hadError = true;
