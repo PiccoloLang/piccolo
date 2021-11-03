@@ -54,7 +54,7 @@ struct piccolo_Bytecode {
     struct piccolo_ByteArray code;
     struct piccolo_IntArray charIdxs;
     struct piccolo_ValueArray constants;
-} piccolo_Bytecode;
+};
 
 void piccolo_initBytecode(struct piccolo_Bytecode* bytecode);
 void piccolo_freeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode);
