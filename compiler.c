@@ -57,6 +57,7 @@ static void initCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler*
     piccolo_initVariableArray(&compiler->globals);
     piccolo_initVariableArray(&compiler->locals);
     piccolo_initUpvalueArray(&compiler->upvals);
+    compiler->hadError = false;
     if(!skipScanner)
         advanceCompiler(engine, compiler);
 }
