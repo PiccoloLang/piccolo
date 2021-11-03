@@ -37,7 +37,7 @@ static void compilationError(struct piccolo_Engine* engine, struct piccolo_Compi
         lineNumberDigits++;
         lineNumber /= 10;
     }
-    piccolo_enginePrintError(engine, "%* ^", 9 + lineNumberDigits + compiler->current.start - tokenLine.lineStart);
+    piccolo_enginePrintError(engine, "%*c^", 9 + lineNumberDigits + compiler->current.start - tokenLine.lineStart, ' ');
     piccolo_enginePrintError(engine, "\n");
     compiler->hadError = true;
 }
