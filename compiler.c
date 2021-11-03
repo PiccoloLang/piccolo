@@ -333,7 +333,7 @@ static void compileVarLookup(COMPILE_PARAMETERS) {
         if(compiler->current.type == PICCOLO_TOKEN_EQ) {
             advanceCompiler(engine, compiler);
             int charIdx = compiler->current.charIdx;
-            compileFnLiteral(COMPILE_ARGUMENTS_REQ_VAL);
+            compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
             piccolo_writeParameteredBytecode(engine, bytecode, setOp, param, charIdx);
         } else {
             piccolo_writeParameteredBytecode(engine, bytecode, getOp, param, varName.charIdx);
@@ -382,7 +382,7 @@ static void compileIndexing(COMPILE_PARAMETERS) {
             advanceCompiler(engine, compiler);
             if(compiler->current.type == PICCOLO_TOKEN_EQ) {
                 advanceCompiler(engine, compiler);
-                compileArray(COMPILE_ARGUMENTS_REQ_VAL);
+                compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
                 piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SET_IDX, charIdx);
             } else {
                 piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_IDX, charIdx);

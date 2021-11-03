@@ -324,7 +324,7 @@ static bool run(struct piccolo_Engine* engine) {
                     if(ptr != NULL)
                         *ptr = val;
                 }
-                break;
+                piccolo_enginePushStack(engine, val);
                 break;
             }
             case PICCOLO_OP_POP_STACK: {
