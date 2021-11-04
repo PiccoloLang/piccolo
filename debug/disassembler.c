@@ -68,7 +68,7 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         }
         PARAM_INSTRUCTION(OP_GET_UPVAL)
         PARAM_INSTRUCTION(OP_SET_UPVAL)
-        PARAM_INSTRUCTION(OP_CLOSE_UPVALS)
+        SIMPLE_INSTRUCTION(OP_CLOSE_UPVALS)
 
         SIMPLE_INSTRUCTION(OP_GET_LEN)
         SIMPLE_INSTRUCTION(OP_APPEND)

@@ -795,7 +795,7 @@ static void compileBlock(COMPILE_PARAMETERS) {
                 piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
             compiler->locals.count = localsBefore;
         }
-        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, localsBefore, charIdx);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
         return;
     }
     compileFor(COMPILE_ARGUMENTS);
