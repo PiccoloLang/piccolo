@@ -114,6 +114,36 @@ static int getPackageSlot(struct piccolo_Engine* engine, const char* name, size_
     return -1;
 }
 
+static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* sourcePath, const char* name, size_t nameLen) {
+    struct piccolo_Package* package = NULL;
+
+    int packageSlot = getPackageSlot(engine, name, nameLen);
+    if(packageSlot == -1) {
+        char filepath[1024];
+        piccolo_applyRelativePathToFilePath(filepath, name, nameLen, sourcePath);
+        size_t pathLen = strlen(filepath) + 1;
+        packageSlot = getPackageSlot(engine, filepath, pathLen - 1);
+        if(packageSlot == -1) {
+            const char* path = malloc(pathLen + 1);
+            strcpy(path, filepath);
+            package = piccolo_createPackage(engine);
+            package->packageName = path;
+            package->source = piccolo_readFile(path);
+            if(package->source == NULL) {
+                compilationError(engine, compiler, "Package %s does not exist.", path);
+                return NULL;
+            }
+            piccolo_compilePackage(engine, package);
+            package = piccolo_loadPackage(engine, path);
+        } else {
+            package = engine->packages.values[packageSlot];
+        }
+    } else {
+        package = engine->packages.values[packageSlot];
+    }
+    return package;
+}
+
 #define COMPILE_PARAMETERS struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Bytecode* bytecode, bool requireValue, bool global, struct piccolo_Package* package
 #define COMPILE_ARGUMENTS engine, compiler, bytecode, requireValue, global, package
 #define COMPILE_ARGUMENTS_REQ_VAL engine, compiler, bytecode, true, global, package
@@ -196,29 +226,14 @@ static void compileImport(COMPILE_PARAMETERS) {
         }
         const char* packageName = compiler->current.start + 1;
         size_t packageNameLen = compiler->current.length - 2;
-        int packageSlot = getPackageSlot(engine, packageName, packageNameLen);
 
-        struct piccolo_Package* importedPackage = NULL;
+        struct piccolo_Package* importedPackage = resolvePackage(engine, compiler, package->packageName, packageName, packageNameLen);
 
-        if(packageSlot == -1) {
-            char filepath[1024];
-            piccolo_applyRelativePathToFilePath(filepath, packageName, packageNameLen, package->packageName);
-            size_t pathLen = strlen(filepath) + 1;
-            packageSlot = getPackageSlot(engine, filepath, pathLen - 1);
-            if(packageSlot == -1) {
-                const char* path = malloc(pathLen + 1);
-                strcpy(path, filepath);
-                importedPackage = piccolo_loadPackage(engine, path);
-            } else {
-                importedPackage = engine->packages.values[packageSlot];
-            }
-        } else {
-            importedPackage = engine->packages.values[packageSlot];
+        if(importedPackage != NULL) {
+            piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(importedPackage), charIdx);
+            if(importedPackage->compiled)
+                piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_EXECUTE_PACKAGE, charIdx);
         }
-
-        piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(importedPackage), charIdx);
-        if(importedPackage->compiled)
-            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_EXECUTE_PACKAGE, charIdx);
         advanceCompiler(engine, compiler);
         return;
     }

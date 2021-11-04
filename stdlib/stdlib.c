@@ -2,7 +2,6 @@
 #include "stdlib.h"
 #include "../embedding.h"
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -23,7 +22,7 @@ static piccolo_Value inputNative(struct piccolo_Engine* engine, int argc, struct
 
     size_t lenMax = 64;
     size_t len = 0;
-    char* line = malloc(lenMax);
+    char* line = PICCOLO_REALLOCATE("input string", engine, NULL, 0, lenMax);
     char* curr = line;
     for(;;) {
         if(line == NULL) {
@@ -39,7 +38,7 @@ static piccolo_Value inputNative(struct piccolo_Engine* engine, int argc, struct
         len++;
         if(len >= lenMax) {
             lenMax *= 2;
-            line = realloc(line, lenMax);
+            line = PICCOLO_REALLOCATE("input string", engine, line, lenMax / 2, lenMax);
         }
     }
     *curr = '\0';
