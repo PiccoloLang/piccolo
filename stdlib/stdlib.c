@@ -2,6 +2,7 @@
 #include "stdlib.h"
 #include "../embedding.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -14,10 +15,42 @@ static piccolo_Value printNative(struct piccolo_Engine* engine, int argc, struct
     return PICCOLO_NIL_VAL();
 }
 
+static piccolo_Value inputNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+    if(argc != 0) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+        return PICCOLO_NIL_VAL();
+    }
+
+    size_t lenMax = 64;
+    size_t len = 0;
+    char* line = malloc(lenMax);
+    char* curr = line;
+    for(;;) {
+        if(line == NULL) {
+            piccolo_runtimeError(engine, "Could not read input.");
+            return PICCOLO_NIL_VAL();
+        }
+        int c = fgetc(stdin);
+        if(c == EOF || c == '\n') {
+            break;
+        }
+        *curr = c;
+        curr++;
+        len++;
+        if(len >= lenMax) {
+            lenMax *= 2;
+            line = realloc(line, lenMax);
+        }
+    }
+    *curr = '\0';
+    return PICCOLO_OBJ_VAL(piccolo_takeString(engine, line));
+}
+
 void piccolo_addIOLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* io = piccolo_createPackage(engine);
     io->packageName = "io";
     piccolo_defineGlobal(engine, io, "print", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, printNative)));
+    piccolo_defineGlobal(engine, io, "input", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, inputNative)));
 }
 
 static piccolo_Value clockNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
