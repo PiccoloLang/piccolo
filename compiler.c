@@ -290,7 +290,6 @@ static void compileFnLiteral(COMPILE_PARAMETERS) {
             piccolo_writeBytecode(engine, bytecode, (slot & 0x00FF) >> 0, charIdx);
             piccolo_writeBytecode(engine, bytecode, functionCompiler.upvals.values[i].local, charIdx);
         }
-        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
 
         freeCompiler(engine, &functionCompiler);
         return;
@@ -336,6 +335,8 @@ static void compileVarLookup(COMPILE_PARAMETERS) {
             int charIdx = compiler->current.charIdx;
             compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
             piccolo_writeParameteredBytecode(engine, bytecode, setOp, param, charIdx);
+            if(!(requireValue || compiler->current.type == PICCOLO_TOKEN_RIGHT_BRACE))
+                piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
         } else {
             piccolo_writeParameteredBytecode(engine, bytecode, getOp, param, varName.charIdx);
         }
@@ -566,8 +567,9 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
                     slot = param = compiler->globals.count;
                 }
             } else {
-                slot = getVarSlot(&compiler->locals, varName);
-                if(slot != -1) {
+                slot = getVarSlot(&compiler->globals, varName);
+                int localSlot = getVarSlot(&compiler->locals, varName);
+                if(slot != -1 || localSlot != -1) {
                     compilationError(engine, compiler, "Variable %.*s already defined.", varName.length, varName.start);
                 } else {
                     op = PICCOLO_OP_SET_LOCAL;
@@ -793,7 +795,7 @@ static void compileBlock(COMPILE_PARAMETERS) {
                 piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
             compiler->locals.count = localsBefore;
         }
-        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, localsBefore, charIdx);
         return;
     }
     compileFor(COMPILE_ARGUMENTS);

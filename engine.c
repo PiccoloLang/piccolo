@@ -76,8 +76,8 @@ static piccolo_Value* getPtrToIdx(struct piccolo_Engine* engine, struct piccolo_
     }
 }
 
-static bool shouldCloseUpval(struct piccolo_Engine* engine, struct piccolo_ObjUpval* upval) {
-    return upval->valPtr >= engine->frames[engine->currFrame].varStack && upval->valPtr < engine->frames[engine->currFrame].varStack + 256;
+static bool shouldCloseUpval(struct piccolo_Engine* engine, struct piccolo_ObjUpval* upval, int cnt) {
+    return upval->valPtr >= engine->frames[engine->currFrame].varStack + cnt && upval->valPtr < engine->frames[engine->currFrame].varStack + 256;
 }
 
 static bool run(struct piccolo_Engine* engine) {
@@ -479,9 +479,10 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_CLOSE_UPVALS: {
                 struct piccolo_ObjUpval* newOpen = NULL;
                 struct piccolo_ObjUpval* curr = engine->openUpvals;
+		int cnt = READ_PARAM();
                 while(curr != NULL) {
                     struct piccolo_ObjUpval* next = curr->next;
-                    if(shouldCloseUpval(engine, curr)) {
+                    if(shouldCloseUpval(engine, curr, cnt)) {
                         curr->open = false;
                         piccolo_Value* heapUpval = PICCOLO_REALLOCATE("heap upval", engine, NULL, 0, sizeof(piccolo_Value));
                         *heapUpval = *curr->valPtr;
