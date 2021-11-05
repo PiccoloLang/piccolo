@@ -810,7 +810,6 @@ static void compileBlock(COMPILE_PARAMETERS) {
         int localsBefore = compiler->locals.count;
         advanceCompiler(engine, compiler);
         if(compiler->current.type == PICCOLO_TOKEN_RIGHT_BRACE) {
-            int charIdx = compiler->current.charIdx;
             piccolo_writeConst(engine, bytecode, PICCOLO_NIL_VAL(), charIdx);
             advanceCompiler(engine, compiler);
         } else {
@@ -822,11 +821,10 @@ static void compileBlock(COMPILE_PARAMETERS) {
                 compileFor(engine, compiler, bytecode, false, false, package);
             }
             advanceCompiler(engine, compiler);
-            int charIdx = compiler->current.charIdx;
-            if (!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
-                piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
             compiler->locals.count = localsBefore;
         }
+        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, charIdx);
         return;
     }

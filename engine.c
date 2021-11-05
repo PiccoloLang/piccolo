@@ -10,6 +10,13 @@
 #include "object.h"
 #include "gc.h"
 
+//#define PICCOLO_ENABLE_ENGINE_DEBUG
+
+#ifdef PICCOLO_ENABLE_ENGINE_DEBUG
+#include <stdio.h>
+#include "debug/disassembler.h"
+#endif
+
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Package*, Package)
 
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list)) {
@@ -522,7 +529,15 @@ static bool run(struct piccolo_Engine* engine) {
                 break;
             }
         }
-
+#ifdef PICCOLO_ENABLE_ENGINE_DEBUG
+        piccolo_disassembleInstruction(engine->frames[engine->currFrame].bytecode, engine->frames[engine->currFrame].prevIp);
+        for(piccolo_Value* stackPtr = engine->stack; stackPtr != engine->stackTop; stackPtr++) {
+            printf("[");
+            piccolo_printValue(*stackPtr);
+            printf("] ");
+        }
+        printf("\n");
+#endif
         if(engine->liveMemory > engine->gcThreshold) {
             piccolo_collectGarbage(engine);
             engine->gcThreshold = engine->liveMemory * 2;
