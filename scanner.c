@@ -48,6 +48,7 @@ static enum piccolo_TokenType getKeyword(char* start, char* end) {
     TOKEN_TYPE(FOR, "for")
     TOKEN_TYPE(IN, "in")
     TOKEN_TYPE(IMPORT, "import")
+    TOKEN_TYPE(AS, "as")
 
     return PICCOLO_TOKEN_IDENTIFIER;
     #undef TOKEN_TYPE

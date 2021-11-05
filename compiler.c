@@ -149,6 +149,60 @@ static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, str
 #define COMPILE_ARGUMENTS_REQ_VAL engine, compiler, bytecode, true, global, package
 #define COMPILE_ARGUMENTS_NO_VAL engine, compiler, bytecode, false, global, package
 
+
+static void varDeclaration(COMPILE_PARAMETERS, struct piccolo_Token varName, int charIdx) {
+
+    piccolo_OpCode op = 255;
+    int param = -1;
+    int slot;
+    if(varName.type != PICCOLO_TOKEN_IDENTIFIER) {
+        compilationError(engine, compiler, "Expected variable name.");
+    } else {
+        if(global) {
+            slot = getVarSlot(&compiler->globals, varName);
+            if(slot != -1) {
+                compilationError(engine, compiler, "Variable %.*s already defined.", varName.length, varName.start);
+            } else {
+                op = PICCOLO_OP_SET_GLOBAL;
+                slot = param = compiler->globals.count;
+            }
+        } else {
+            slot = getVarSlot(&compiler->globals, varName);
+            int localSlot = getVarSlot(&compiler->locals, varName);
+            if(slot != -1 || localSlot != -1) {
+                compilationError(engine, compiler, "Variable %.*s already defined.", varName.length, varName.start);
+            } else {
+                op = PICCOLO_OP_SET_LOCAL;
+                param = compiler->locals.count;
+            }
+        }
+    }
+
+    piccolo_writeParameteredBytecode(engine, bytecode, op, param, charIdx);
+
+    if(global) {
+        struct piccolo_Variable variable;
+        variable.slot = slot;
+        variable.name = varName.start;
+        variable.nameLen = varName.length;
+        variable.nameInSource = true;
+        piccolo_writeVariableArray(engine, &compiler->globals, variable);
+        struct piccolo_ObjString* name = piccolo_copyString(engine, varName.start, varName.length);
+        piccolo_setGlobalTable(engine, &package->globalIdxs, name, slot);
+    } else {
+        struct piccolo_Variable variable;
+        variable.slot = slot;
+        variable.name = varName.start;
+        variable.nameLen = varName.length;
+        variable.nameInSource = true;
+        piccolo_writeVariableArray(engine, &compiler->locals, variable);
+    }
+
+    if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+}
+
+
 static void compileExpr(COMPILE_PARAMETERS);
 
 static void compileLiteral(COMPILE_PARAMETERS) {
@@ -235,6 +289,16 @@ static void compileImport(COMPILE_PARAMETERS) {
                 piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_EXECUTE_PACKAGE, charIdx);
         }
         advanceCompiler(engine, compiler);
+
+        if(compiler->current.type == PICCOLO_TOKEN_AS) {
+            int asCharIdx = compiler->current.charIdx;
+            advanceCompiler(engine, compiler);
+            if(compiler->current.type == PICCOLO_TOKEN_IDENTIFIER) {
+                varDeclaration(COMPILE_ARGUMENTS, compiler->current, asCharIdx);
+                advanceCompiler(engine, compiler);
+            }
+        }
+
         return;
     }
     compileRange(COMPILE_ARGUMENTS);
@@ -566,33 +630,6 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
         advanceCompiler(engine, compiler);
         struct piccolo_Token varName = compiler->current;
 
-        piccolo_OpCode op = 255;
-        int param = -1;
-
-        int slot;
-        if(compiler->current.type != PICCOLO_TOKEN_IDENTIFIER) {
-            compilationError(engine, compiler, "Expected variable name.");
-        } else {
-            if(global) {
-                slot = getVarSlot(&compiler->globals, varName);
-                if(slot != -1) {
-                    compilationError(engine, compiler, "Variable %.*s already defined.", varName.length, varName.start);
-                } else {
-                    op = PICCOLO_OP_SET_GLOBAL;
-                    slot = param = compiler->globals.count;
-                }
-            } else {
-                slot = getVarSlot(&compiler->globals, varName);
-                int localSlot = getVarSlot(&compiler->locals, varName);
-                if(slot != -1 || localSlot != -1) {
-                    compilationError(engine, compiler, "Variable %.*s already defined.", varName.length, varName.start);
-                } else {
-                    op = PICCOLO_OP_SET_LOCAL;
-                    param = compiler->locals.count;
-                }
-            }
-        }
-
         advanceCompiler(engine, compiler);
         int eqCharIdx = compiler->current.charIdx;
         if(compiler->current.type != PICCOLO_TOKEN_EQ) {
@@ -600,28 +637,8 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
         }
         advanceCompiler(engine, compiler);
         compileExpr(COMPILE_ARGUMENTS_REQ_VAL);
-        piccolo_writeParameteredBytecode(engine, bytecode, op, param, eqCharIdx);
 
-        if(global) {
-            struct piccolo_Variable variable;
-            variable.slot = slot;
-            variable.name = varName.start;
-            variable.nameLen = varName.length;
-            variable.nameInSource = true;
-            piccolo_writeVariableArray(engine, &compiler->globals, variable);
-            struct piccolo_ObjString* name = piccolo_copyString(engine, varName.start, varName.length);
-            piccolo_setGlobalTable(engine, &package->globalIdxs, name, slot);
-        } else {
-            struct piccolo_Variable variable;
-            variable.slot = slot;
-            variable.name = varName.start;
-            variable.nameLen = varName.length;
-            variable.nameInSource = true;
-            piccolo_writeVariableArray(engine, &compiler->locals, variable);
-        }
-
-        if(!requireValue && compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)
-            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, eqCharIdx);
+        varDeclaration(COMPILE_ARGUMENTS, varName, eqCharIdx);
         return;
     }
     compileBoolOperations(COMPILE_ARGUMENTS);
