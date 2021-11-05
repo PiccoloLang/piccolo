@@ -44,6 +44,7 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
     package->source = piccolo_readFile(filepath);
     if(package->source == NULL) {
         piccolo_enginePrintError(engine, "Could not load package %s\n", filepath);
+        package->compilationError = true;
         return package;
     }
 
