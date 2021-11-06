@@ -27,10 +27,11 @@ void piccolo_writeParameteredBytecode(struct piccolo_Engine* engine, struct picc
     piccolo_writeBytecode(engine, bytecode, (param & 0x00FF) >> 0, charIdx);
 }
 
-void piccolo_writeConst(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, piccolo_Value constant, int charIdx) {
+int piccolo_writeConst(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode, piccolo_Value constant, int charIdx) {
     int constIdx = bytecode->constants.count;
     piccolo_writeValueArray(engine, &bytecode->constants, constant);
     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CONST, constIdx, charIdx);
+    return constIdx;
 }
 
 void piccolo_patchParam(struct piccolo_Bytecode* bytecode, int addr, uint16_t param) {

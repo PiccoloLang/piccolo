@@ -180,21 +180,16 @@ static void varDeclaration(COMPILE_PARAMETERS, struct piccolo_Token varName, int
 
     piccolo_writeParameteredBytecode(engine, bytecode, op, param, charIdx);
 
+    struct piccolo_Variable variable;
+    variable.slot = slot;
+    variable.name = varName.start;
+    variable.nameLen = varName.length;
+    variable.nameInSource = true;
     if(global) {
-        struct piccolo_Variable variable;
-        variable.slot = slot;
-        variable.name = varName.start;
-        variable.nameLen = varName.length;
-        variable.nameInSource = true;
         piccolo_writeVariableArray(engine, &compiler->globals, variable);
         struct piccolo_ObjString* name = piccolo_copyString(engine, varName.start, varName.length);
         piccolo_setGlobalTable(engine, &package->globalIdxs, name, slot);
     } else {
-        struct piccolo_Variable variable;
-        variable.slot = slot;
-        variable.name = varName.start;
-        variable.nameLen = varName.length;
-        variable.nameInSource = true;
         piccolo_writeVariableArray(engine, &compiler->locals, variable);
     }
 
@@ -644,6 +639,111 @@ static void compileVarDecl(COMPILE_PARAMETERS) {
     compileBoolOperations(COMPILE_ARGUMENTS);
 }
 
+static void compileFnDecl(COMPILE_PARAMETERS) {
+    struct piccolo_Scanner scannerCopy = *compiler->scanner;
+    struct piccolo_Token startTokenCopy = compiler->current;
+    int startBytecodeCount = bytecode->code.count;
+    if(compiler->current.type == PICCOLO_TOKEN_FN) {
+        int charIdx = compiler->current.charIdx;
+        advanceCompiler(engine, compiler);
+        struct piccolo_Token funcName = compiler->current;
+        if(compiler->current.type != PICCOLO_TOKEN_IDENTIFIER) {
+            goto syntaxWrong;
+        }
+        advanceCompiler(engine, compiler);
+        if(compiler->current.type != PICCOLO_TOKEN_LEFT_PAREN) {
+            goto syntaxWrong;
+        }
+        advanceCompiler(engine, compiler);
+
+        struct piccolo_Compiler functionCompiler;
+        initCompiler(engine, &functionCompiler, compiler->scanner->source, true);
+        functionCompiler.scanner = compiler->scanner;
+        struct piccolo_ObjFunction* function = piccolo_newFunction(engine);
+
+        while(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN) {
+            struct piccolo_Variable parameter;
+            parameter.name = compiler->current.start;
+            parameter.nameLen = compiler->current.length;
+            parameter.slot = functionCompiler.locals.count;
+            parameter.nameInSource = true;
+            piccolo_writeVariableArray(engine, &functionCompiler.locals, parameter);
+            function->arity++;
+            advanceCompiler(engine, compiler);
+            if(compiler->current.type != PICCOLO_TOKEN_RIGHT_PAREN && compiler->current.type != PICCOLO_TOKEN_COMMA) {
+                compilationError(engine, compiler, "Expected ).");
+                return;
+            }
+            if(compiler->current.type == PICCOLO_TOKEN_COMMA) {
+                advanceCompiler(engine, compiler);
+                if(compiler->current.type != PICCOLO_TOKEN_IDENTIFIER) {
+                    compilationError(engine, compiler, "Expected parameter name.");
+                    return;
+                }
+            }
+        }
+        advanceCompiler(engine, compiler);
+
+        functionCompiler.current = compiler->current;
+        functionCompiler.cycled = false;
+        functionCompiler.hadError = false;
+        functionCompiler.enclosing = compiler;
+
+        struct piccolo_Variable variable;
+        variable.name = funcName.start;
+        variable.nameLen = funcName.length;
+        variable.nameInSource = true;
+        if(global) {
+            variable.slot = compiler->globals.count;
+            piccolo_writeVariableArray(engine, &compiler->globals, variable);
+        } else {
+            variable.slot = compiler->locals.count;
+            piccolo_writeVariableArray(engine, &compiler->locals, variable);
+        }
+
+        functionCompiler.globals = compiler->globals;
+        compileExpr(engine, &functionCompiler, &function->bytecode, true, false, package);
+
+        if(global) {
+            piccolo_popVariableArray(&compiler->globals);
+        } else {
+            piccolo_popVariableArray(&compiler->locals);
+        }
+
+        piccolo_writeBytecode(engine, &function->bytecode, PICCOLO_OP_RETURN, 1);
+
+        if(functionCompiler.hadError)
+            compiler->hadError = true;
+
+        compiler->current = functionCompiler.current;
+
+        piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(function), charIdx);
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CLOSURE, functionCompiler.upvals.count, charIdx);
+        for(int i = 0; i < functionCompiler.upvals.count; i++) {
+            int slot = functionCompiler.upvals.values[i].slot;
+            piccolo_writeBytecode(engine, bytecode, (slot & 0xFF00) >> 8, charIdx);
+            piccolo_writeBytecode(engine, bytecode, (slot & 0x00FF) >> 0, charIdx);
+            piccolo_writeBytecode(engine, bytecode, functionCompiler.upvals.values[i].local, charIdx);
+        }
+        freeCompiler(engine, &functionCompiler);
+
+        varDeclaration(COMPILE_ARGUMENTS, funcName, charIdx);
+
+        if(!(requireValue || compiler->current.type != PICCOLO_TOKEN_RIGHT_BRACE)) {
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
+        }
+        return;
+    }
+    if(false) {
+        syntaxWrong:
+        *compiler->scanner = scannerCopy;
+        compiler->current = startTokenCopy;
+        bytecode->code.count = startBytecodeCount;
+        bytecode->charIdxs.count = startBytecodeCount;
+    }
+    compileVarDecl(COMPILE_ARGUMENTS);
+}
+
 static void compileIf(COMPILE_PARAMETERS) {
     if(compiler->current.type == PICCOLO_TOKEN_IF) {
         advanceCompiler(engine, compiler);
@@ -673,7 +773,7 @@ static void compileIf(COMPILE_PARAMETERS) {
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, charIdx);
         return;
     }
-    compileVarDecl(COMPILE_ARGUMENTS);
+    compileFnDecl(COMPILE_ARGUMENTS);
 }
 
 static void compileWhile(COMPILE_PARAMETERS) {
