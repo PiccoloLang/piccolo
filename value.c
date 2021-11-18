@@ -28,6 +28,9 @@ static void printObject(struct piccolo_Obj* obj) {
     if(obj->type == PICCOLO_OBJ_CLOSURE) {
         printf("<fn>");
     }
+    if(obj->type == PICCOLO_OBJ_NATIVE_FN) {
+        printf("<native fn>");
+    }
     if(obj->type == PICCOLO_OBJ_PACKAGE) {
         struct piccolo_Package* package = ((struct piccolo_Package*)obj);
         printf("<package \"%s\">", package->packageName);

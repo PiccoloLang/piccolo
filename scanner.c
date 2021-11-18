@@ -1,17 +1,16 @@
 
 #include "scanner.h"
-
 #include <string.h>
 #include <stdbool.h>
 
-void piccolo_initScanner(struct piccolo_Scanner* scanner, char* source) {
+void piccolo_initScanner(struct piccolo_Scanner* scanner, const char* source) {
     scanner->source = source;
     scanner->start = source;
     scanner->current = source;
 }
 
 static void skipWhitespace(struct piccolo_Scanner* scanner) {
-    while(*scanner->current == ' ' || *scanner->current == '\t' || *scanner->current == '\n') {
+    while(*scanner->current == ' ' || *scanner->current == '\t') {
         scanner->current++;
     }
     scanner->start = scanner->current;
@@ -29,7 +28,7 @@ static bool alphanumeric(char c) {
     return alpha(c) || numeric(c);
 }
 
-static enum piccolo_TokenType getKeyword(char* start, char* end) {
+static enum piccolo_TokenType getKeyword(const char* start, const char* end) {
     #define TOKEN_TYPE(token, keyword)                                                        \
         if(end - start < sizeof keyword && memcmp(start, keyword, (sizeof keyword) - 1) == 0) \
             return PICCOLO_TOKEN_ ## token;
@@ -39,6 +38,7 @@ static enum piccolo_TokenType getKeyword(char* start, char* end) {
     TOKEN_TYPE(FALSE, "false")
 
     TOKEN_TYPE(VAR, "var")
+    TOKEN_TYPE(CONST, "const")
     TOKEN_TYPE(FN, "fn")
     TOKEN_TYPE(AND, "and")
     TOKEN_TYPE(OR, "or")
@@ -122,6 +122,10 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
         }
         case '!': {
             scanner->current++;
+            if(*scanner->current == '=') {
+                scanner->current++;
+                return makeToken(scanner, PICCOLO_TOKEN_BANG_EQ);
+            }
             return makeToken(scanner, PICCOLO_TOKEN_BANG);
         }
         case '(': {
@@ -174,6 +178,10 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
             scanner->start = scanner->current;
             return piccolo_nextToken(scanner);
         }
+        case '\n': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_NEWLINE);
+        }
         case '\0': {
             return makeToken(scanner, PICCOLO_TOKEN_EOF);
         }
@@ -183,14 +191,21 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
         while(numeric(*scanner->current)) {
             scanner->current++;
         }
+
+        bool hadPeriod = *scanner->current == '.';
         if(*scanner->current == '.')
             scanner->current++;
         if(*scanner->current == '.') {
             scanner->current--;
             return makeToken(scanner, PICCOLO_TOKEN_NUM);
         }
-        while(numeric(*scanner->current)) {
-            scanner->current++;
+
+        if(hadPeriod && !numeric(*scanner->current)) {
+            scanner->current--;
+        } else {
+            while (numeric(*scanner->current)) {
+                scanner->current++;
+            }
         }
         return makeToken(scanner, PICCOLO_TOKEN_NUM);
     }

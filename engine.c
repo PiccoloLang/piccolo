@@ -93,7 +93,7 @@ static bool run(struct piccolo_Engine* engine) {
     engine->hadError = false;
     while(true) {
         engine->frames[engine->currFrame].prevIp = engine->frames[engine->currFrame].ip;
-        piccolo_OpCode opcode = READ_BYTE();
+        enum piccolo_OpCode opcode = READ_BYTE();
         switch(opcode) {
             case PICCOLO_OP_RETURN:
                 engine->currFrame--;
@@ -262,6 +262,15 @@ static bool run(struct piccolo_Engine* engine) {
                     break;
                 }
                 piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(PICCOLO_AS_NUM(a) < PICCOLO_AS_NUM(b)));
+                break;
+            }
+            case PICCOLO_OP_NEGATE: {
+                piccolo_Value val = piccolo_enginePopStack(engine);
+                if(!PICCOLO_IS_NUM(val)) {
+                    piccolo_runtimeError(engine, "Cannot negate %s.", piccolo_getTypeName(val));
+                    break;
+                }
+                piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(-PICCOLO_AS_NUM(val)));
                 break;
             }
             case PICCOLO_OP_NOT: {
@@ -515,7 +524,7 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_EXECUTE_PACKAGE: {
                 piccolo_Value val = piccolo_enginePeekStack(engine, 1);
                 struct piccolo_Package* package = (struct piccolo_Package*)PICCOLO_AS_OBJ(val);
-                if(!package->executed) {
+                if(!package->executed && package->compiled) {
                     engine->currFrame++;
                     engine->frames[engine->currFrame].package = package;
                     package->executed = true;
