@@ -180,6 +180,14 @@ static void markReqEval(struct piccolo_ExprNode* expr) {
             }
             break;
         }
+        case PICCOLO_EXPR_WHILE: {
+            struct piccolo_WhileNode* whileNode = (struct piccolo_WhileNode*)expr;
+            whileNode->condition->reqEval = true;
+            markReqEval(whileNode->condition);
+            whileNode->value->reqEval = whileNode->expr.reqEval;
+            markReqEval(whileNode->value);
+            break;
+        }
         case PICCOLO_EXPR_CALL: {
             struct piccolo_CallNode* call = (struct piccolo_CallNode*)expr;
             call->function->reqEval = true;
@@ -469,6 +477,22 @@ static void compileIf(struct piccolo_IfNode* ifNode, COMPILE_PARAMS) {
     }
 }
 
+static void compileWhile(struct piccolo_WhileNode* whileNode, COMPILE_PARAMS) {
+    if(whileNode->expr.reqEval)
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 0, 0);
+    int loopStartAddr = bytecode->code.count;
+    compileExpr(whileNode->condition, COMPILE_ARGS);
+    int skipLoopAddr = bytecode->code.count;
+    piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP_FALSE, 0, whileNode->conditionCharIdx);
+    compileExpr(whileNode->value, COMPILE_ARGS);
+    if(whileNode->expr.reqEval)
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_APPEND, 0);
+    int valueEndAddr = bytecode->code.count;
+    piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_REV_JUMP, valueEndAddr - loopStartAddr, whileNode->conditionCharIdx);
+    int loopEndAddr = bytecode->code.count;
+    piccolo_patchParam(bytecode, skipLoopAddr, loopEndAddr - skipLoopAddr);
+}
+
 static void compileCall(struct piccolo_CallNode* call, COMPILE_PARAMS) {
     compileExpr(call->function, COMPILE_ARGS);
     int argCount = 0;
@@ -537,6 +561,10 @@ static void compileExpr(struct piccolo_ExprNode* expr, COMPILE_PARAMS) {
         }
         case PICCOLO_EXPR_IF: {
             compileIf((struct piccolo_IfNode*)expr, COMPILE_ARGS);
+            break;
+        }
+        case PICCOLO_EXPR_WHILE: {
+            compileWhile((struct piccolo_WhileNode*)expr, COMPILE_ARGS);
             break;
         }
         case PICCOLO_EXPR_CALL: {

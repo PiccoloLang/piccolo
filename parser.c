@@ -417,9 +417,22 @@ static struct piccolo_ExprNode* parseIf(PARSER_PARAMS) {
     return parseVarDecl(PARSER_ARGS);
 }
 
+static struct piccolo_ExprNode* parseWhile(PARSER_PARAMS) {
+    SKIP_NEWLINES()
+    if(parser->currToken.type == PICCOLO_TOKEN_WHILE) {
+        advanceParser(engine, parser);
+        struct piccolo_WhileNode* whileNode = ALLOCATE_NODE(parser, While, PICCOLO_EXPR_WHILE);
+        whileNode->conditionCharIdx = parser->currToken.charIdx;
+        whileNode->condition = parseExpr(PARSER_ARGS_REQ_VAL);
+        whileNode->value = parseExpr(PARSER_ARGS_REQ_VAL);
+        return (struct piccolo_ExprNode*)whileNode;
+    }
+    return parseIf(PARSER_ARGS);
+}
+
 static struct piccolo_ExprNode* parseExpr(PARSER_PARAMS) {
     SKIP_NEWLINES()
-    return parseIf(PARSER_ARGS);
+    return parseWhile(PARSER_ARGS);
 }
 
 struct piccolo_ExprNode* piccolo_parse(struct piccolo_Engine* engine, struct piccolo_Parser* parser) {

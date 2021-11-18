@@ -76,15 +76,28 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
             printf("IF\n");
             piccolo_printExpr(ifNode->condition, offset + 1);
             for(int i = 0; i <= offset + 1; i++)
-                printf("\t");
+                printf("    ");
             printf("TRUE EXPR\n");
             piccolo_printExpr(ifNode->trueVal, offset + 2);
             if(ifNode->falseVal != NULL) {
                 for(int i = 0; i <= offset + 1; i++)
-                    printf("\t");
+                    printf("    ");
                 printf("FALSE EXPR\n");
                 piccolo_printExpr(ifNode->falseVal, offset + 2);
             }
+            break;
+        }
+        case PICCOLO_EXPR_WHILE: {
+            struct piccolo_WhileNode* whileNode = (struct piccolo_WhileNode*)expr;
+            printf("WHILE\n");
+            for(int i = 0; i <= offset + 1; i++)
+                printf("    ");
+            printf("CONDITION\n");
+            piccolo_printExpr(whileNode->condition, offset + 2);
+            for(int i = 0; i <= offset + 1; i++)
+                printf("    ");
+            printf("VALUE\n");
+            piccolo_printExpr(whileNode->value, offset + 2);
             break;
         }
         case PICCOLO_EXPR_CALL: {

@@ -18,6 +18,7 @@ enum piccolo_ExprNodeType {
     PICCOLO_EXPR_SUBSCRIPT_SET,
 
     PICCOLO_EXPR_IF,
+    PICCOLO_EXPR_WHILE,
 
     PICCOLO_EXPR_CALL,
 
@@ -90,6 +91,13 @@ struct piccolo_IfNode {
     struct piccolo_ExprNode* condition;
     struct piccolo_ExprNode* trueVal;
     struct piccolo_ExprNode* falseVal;
+    int conditionCharIdx;
+};
+
+struct piccolo_WhileNode {
+    struct piccolo_ExprNode expr;
+    struct piccolo_ExprNode* condition;
+    struct piccolo_ExprNode* value;
     int conditionCharIdx;
 };
 
