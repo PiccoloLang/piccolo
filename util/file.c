@@ -6,7 +6,7 @@
 #include "file.h"
 
 char* piccolo_readFile(const char* path) {
-    FILE* file = fopen(path, "rb");
+    FILE* file = fopen(path, "r");
     if(file == NULL)
         return NULL;
 
