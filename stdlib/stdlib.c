@@ -91,7 +91,7 @@ static piccolo_Value disassembleFunctionNative(struct piccolo_Engine* engine, in
         if(!PICCOLO_IS_OBJ(val) || PICCOLO_AS_OBJ(val)->type != PICCOLO_OBJ_CLOSURE) {
             piccolo_runtimeError(engine, "Cannot dissasemble %s.", piccolo_getTypeName(val));
         } else {
-            struct piccolo_ObjClosure* function = PICCOLO_AS_OBJ(val);
+            struct piccolo_ObjClosure* function = (struct piccolo_ObjClosure*) PICCOLO_AS_OBJ(val);
             piccolo_disassembleBytecode(&function->prototype->bytecode);
         }
     }

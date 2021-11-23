@@ -36,7 +36,7 @@ typedef struct piccolo_Value piccolo_Value;
 #define PICCOLO_NIL_VAL() ((piccolo_Value){PICCOLO_VALUE_NIL, {.number = 0}})
 #define PICCOLO_NUM_VAL(num) ((piccolo_Value){PICCOLO_VALUE_NUMBER, {.number = (num)}})
 #define PICCOLO_BOOL_VAL(bool) ((piccolo_Value){PICCOLO_VALUE_BOOL, {.boolean = (bool)}})
-#define PICCOLO_OBJ_VAL(object)((piccolo_Value){PICCOLO_VALUE_OBJ, {.obj = (object)}})
+#define PICCOLO_OBJ_VAL(object)((piccolo_Value){PICCOLO_VALUE_OBJ, {.obj = (struct piccolo_Obj*) (object)}})
 
 PICCOLO_DYNARRAY_HEADER(piccolo_Value, Value)
 

@@ -124,7 +124,7 @@ static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, str
         size_t pathLen = strlen(filepath) + 1;
         packageSlot = getPackageSlot(engine, filepath, pathLen - 1);
         if(packageSlot == -1) {
-            const char* path = malloc(pathLen + 1);
+            char* path = malloc(pathLen + 1);
             strcpy(path, filepath);
             package = piccolo_createPackage(engine);
             package->packageName = path;

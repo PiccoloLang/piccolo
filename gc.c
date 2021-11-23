@@ -27,9 +27,12 @@ static void markObj(struct piccolo_Obj* obj) {
         case PICCOLO_OBJ_CLOSURE: {
             struct piccolo_ObjClosure* closure = (struct piccolo_ObjClosure*)obj;
             for(int i = 0; i < closure->upvalCnt; i++)
-                markObj(closure->upvals[i]);
+                markObj((struct piccolo_Obj*) closure->upvals[i]);
             break;
         }
+        case PICCOLO_OBJ_STRING: break;
+        case PICCOLO_OBJ_NATIVE_FN: break;
+        case PICCOLO_OBJ_PACKAGE: break;
     }
     obj->marked = true;
 }
@@ -57,7 +60,7 @@ static void markRoots(struct piccolo_Engine* engine) {
     for(int i = 0; i <= engine->currFrame; i++) {
         for(int j = 0; j < 256; j++)
             markValue(engine->frames[i].varStack[j]);
-        markObj(engine->frames[i].closure);
+        markObj((struct piccolo_Obj*) engine->frames[i].closure);
     }
     for(int i = 0; i < engine->packages.count; i++)
         markPackage(engine->packages.values[i]);
