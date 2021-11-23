@@ -82,6 +82,84 @@ void piccolo_addTimeLib(struct piccolo_Engine* engine) {
     piccolo_defineGlobal(engine, time, "sleep", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sleepNative)));
 }
 
+static piccolo_Value mapNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+    if(argc != 5) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+        return PICCOLO_NIL_VAL();
+    } else {
+        for(int i = 0; i < 5; i++) {
+            if(!PICCOLO_IS_NUM(argv[i])) {
+                piccolo_runtimeError(engine, "All arguments must be numbers.");
+                return PICCOLO_NIL_VAL();
+            }
+        }
+        double value = PICCOLO_AS_NUM(argv[0]);
+        double fromL = PICCOLO_AS_NUM(argv[1]);
+        double fromR = PICCOLO_AS_NUM(argv[2]);
+        double toL = PICCOLO_AS_NUM(argv[3]);
+        double toR = PICCOLO_AS_NUM(argv[4]);
+        double result = ((value - fromL) / (fromR - fromL)) * (toR - toL) + toL;
+        return PICCOLO_NUM_VAL(result);
+    }
+}
+
+#include <math.h>
+
+static piccolo_Value sinNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+    if(argc != 1) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+    } else {
+        if(!PICCOLO_IS_NUM(argv[0])) {
+            piccolo_runtimeError(engine, "Angle must be number.");
+        } else {
+            double angle = PICCOLO_AS_NUM(argv[0]);
+            double result = sin(angle);
+            return PICCOLO_NUM_VAL(result);
+        }
+    }
+    return PICCOLO_NIL_VAL();
+}
+
+static piccolo_Value cosNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+    if(argc != 1) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+    } else {
+        if(!PICCOLO_IS_NUM(argv[0])) {
+            piccolo_runtimeError(engine, "Angle must be number.");
+        } else {
+            double angle = PICCOLO_AS_NUM(argv[0]);
+            double result = cos(angle);
+            return PICCOLO_NUM_VAL(result);
+        }
+    }
+    return PICCOLO_NIL_VAL();
+}
+
+static piccolo_Value tanNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+    if(argc != 1) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+    } else {
+        if(!PICCOLO_IS_NUM(argv[0])) {
+            piccolo_runtimeError(engine, "Angle must be number.");
+        } else {
+            double angle = PICCOLO_AS_NUM(argv[0]);
+            double result = tan(angle);
+            return PICCOLO_NUM_VAL(result);
+        }
+    }
+    return PICCOLO_NIL_VAL();
+}
+
+void piccolo_addMathLib(struct piccolo_Engine* engine) {
+    struct piccolo_Package* math = piccolo_createPackage(engine);
+    math->packageName = "math";
+    piccolo_defineGlobal(engine, math, "pi", PICCOLO_NUM_VAL(3.14159265359));
+    piccolo_defineGlobal(engine, math, "map", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, mapNative)));
+    piccolo_defineGlobal(engine, math, "sin", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sinNative)));
+    piccolo_defineGlobal(engine, math, "cos", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, cosNative)));
+    piccolo_defineGlobal(engine, math, "tan", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, tanNative)));
+}
+
 #include "../debug/disassembler.h"
 static piccolo_Value disassembleFunctionNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
     if(argc != 1) {
