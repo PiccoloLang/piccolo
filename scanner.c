@@ -10,7 +10,7 @@ void piccolo_initScanner(struct piccolo_Scanner* scanner, const char* source) {
 }
 
 static void skipWhitespace(struct piccolo_Scanner* scanner) {
-    while(*scanner->current == ' ' || *scanner->current == '\t') {
+    while(*scanner->current == ' ' || *scanner->current == '\t' || *scanner->current == '\r') {
         scanner->current++;
     }
     scanner->start = scanner->current;

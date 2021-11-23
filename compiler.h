@@ -17,12 +17,21 @@ struct piccolo_Variable {
     bool mutable;
 };
 
+struct piccolo_Upvalue {
+    int slot;
+    bool local;
+    bool mutable;
+};
+
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Variable, Variable)
+PICCOLO_DYNARRAY_HEADER(struct piccolo_Upvalue, Upvalue)
 
 struct piccolo_Compiler {
     struct piccolo_Package* package;
     struct piccolo_VariableArray* globals;
     struct piccolo_VariableArray locals;
+    struct piccolo_UpvalueArray upvals;
+    struct piccolo_Compiler* enclosing;
     bool hadError;
 };
 

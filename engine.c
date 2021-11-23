@@ -70,7 +70,7 @@ static piccolo_Value* getPtrToIdx(struct piccolo_Engine* engine, struct piccolo_
             struct piccolo_ObjString* varname = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(idx);
             int globalIdx = piccolo_getGlobalTable(engine, &package->globalIdxs, varname);
             if(globalIdx == -1) {
-                piccolo_runtimeError(engine, "Global variable %.*s does not exists in package %s", varname->len, varname->string, package->packageName);
+                piccolo_runtimeError(engine, "Global variable '%.*s' does not exists in package %s", varname->len, varname->string, package->packageName);
                 return NULL;
             } else {
                 return &package->globals.values[globalIdx];
@@ -468,7 +468,7 @@ static bool run(struct piccolo_Engine* engine) {
                 for(int i = 0; i < upvals; i++) {
                     int slot = READ_PARAM();
                     if(READ_BYTE())
-                        closure->upvals[i] = piccolo_newUpval(engine, engine->frames[engine->currFrame].varStack + slot);
+                        closure->upvals[i] = piccolo_newUpval(engine, &engine->frames[engine->currFrame].varStack[slot]);
                     else
                         closure->upvals[i] = engine->frames[engine->currFrame].closure->upvals[slot];
                 }
