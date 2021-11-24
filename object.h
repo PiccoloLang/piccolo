@@ -23,7 +23,7 @@ struct piccolo_Obj {
 
 struct piccolo_ObjString {
     struct piccolo_Obj obj;
-    const char* string;
+    char* string;
     int len;
     uint32_t hash;
 };
@@ -63,7 +63,7 @@ struct piccolo_ObjNativeFn {
 
 void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj);
 
-struct piccolo_ObjString* piccolo_takeString(struct piccolo_Engine* engine, const char* string);
+struct piccolo_ObjString* piccolo_takeString(struct piccolo_Engine* engine, char* string);
 struct piccolo_ObjString* piccolo_copyString(struct piccolo_Engine* engine, const char* string, int len);
 struct piccolo_ObjArray* piccolo_newArray(struct piccolo_Engine* engine, int len);
 struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine);
