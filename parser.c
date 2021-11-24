@@ -207,6 +207,8 @@ static struct piccolo_ExprNode* parseArrayLiteral(PARSER_PARAMS) {
                 break;
             }
             struct piccolo_ExprNode* next = parseExpr(PARSER_ARGS_REQ_VAL);
+            while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+                advanceParser(engine, parser);
             if(first == NULL)
                 first = next;
             if(curr != NULL)
