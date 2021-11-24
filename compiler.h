@@ -14,13 +14,13 @@ struct piccolo_Variable {
     int slot;
     const char* nameStart;
     size_t nameLen;
-    bool mutable;
+    bool Mutable;
 };
 
 struct piccolo_Upvalue {
     int slot;
     bool local;
-    bool mutable;
+    bool Mutable;
 };
 
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Variable, Variable)

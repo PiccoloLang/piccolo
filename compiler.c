@@ -85,7 +85,7 @@ static int resolveUpvalue(struct piccolo_Engine* engine, struct piccolo_Compiler
         struct piccolo_Upvalue upval;
         upval.slot = slot;
         upval.local = false;
-        upval.mutable = compiler->enclosing->upvals.values[slot].mutable;
+        upval.Mutable = compiler->enclosing->upvals.values[slot].Mutable;
         piccolo_writeUpvalueArray(engine, &compiler->upvals, upval);
         return result;
     }
@@ -99,7 +99,7 @@ static int resolveUpvalue(struct piccolo_Engine* engine, struct piccolo_Compiler
     struct piccolo_Upvalue upval;
     upval.slot = enclosingSlot;
     upval.local = true;
-    upval.mutable = compiler->enclosing->locals.values[enclosingSlot].mutable;
+    upval.Mutable = compiler->enclosing->locals.values[enclosingSlot].Mutable;
     piccolo_writeUpvalueArray(engine, &compiler->upvals, upval);
 
     return slot;
@@ -110,7 +110,7 @@ static struct piccolo_Variable createVar(struct piccolo_Token name, int slot) {
     var.nameStart = name.start;
     var.nameLen = name.length;
     var.slot = slot;
-    var.mutable = true;
+    var.Mutable = true;
     return var;
 }
 
@@ -165,19 +165,19 @@ static struct variableData getVariable(struct piccolo_Engine* engine, struct pic
                 result.slot = upvalueSlot;
                 result.setOp = PICCOLO_OP_SET_UPVAL;
                 result.getOp = PICCOLO_OP_GET_UPVAL;
-                result.mutable = compiler->upvals.values[upvalueSlot].mutable;
+                result.mutable = compiler->upvals.values[upvalueSlot].Mutable;
             }
         } else {
             result.slot = localSlot;
             result.getOp = PICCOLO_OP_GET_LOCAL;
             result.setOp = PICCOLO_OP_SET_LOCAL;
-            result.mutable = compiler->locals.values[localSlot].mutable;
+            result.mutable = compiler->locals.values[localSlot].Mutable;
         }
     } else {
         result.slot = globalSlot;
         result.getOp = PICCOLO_OP_GET_GLOBAL;
         result.setOp = PICCOLO_OP_SET_GLOBAL;
-        result.mutable = compiler->globals->values[globalSlot].mutable;
+        result.mutable = compiler->globals->values[globalSlot].Mutable;
     }
 
     return result;
@@ -338,7 +338,7 @@ static void findGlobals(struct piccolo_Engine* engine, struct piccolo_Compiler* 
                     compilationError(engine, compiler, varDecl->name.charIdx, "Variable '%.*s' already defined.", varDecl->name.length, varDecl->name.start);
                 } else {
                     struct piccolo_Variable var = createVar(varDecl->name, compiler->globals->count);
-                    var.mutable = varDecl->mutable;
+                    var.Mutable = varDecl->mutable;
                     piccolo_writeVariableArray(engine, compiler->globals, var);
                 }
                 break;
@@ -589,7 +589,7 @@ static void compileVarDecl(struct piccolo_VarDeclNode* varDecl, COMPILE_PARAMS) 
         } else {
             int slot = compiler->locals.count;
             struct piccolo_Variable var = createVar(varDecl->name, slot);
-            var.mutable = varDecl->mutable;
+            var.Mutable = varDecl->mutable;
             piccolo_writeVariableArray(engine, &compiler->locals, var);
             piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_SET_LOCAL, slot, varDecl->name.charIdx);
         }
@@ -734,7 +734,7 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
     } else {
         slot = compiler->locals.count;
         struct piccolo_Variable var = createVar(forNode->name, slot);
-        var.mutable = false;
+        var.Mutable = false;
         piccolo_writeVariableArray(engine, &compiler->locals, var);
     }
 
@@ -929,7 +929,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     findGlobals(engine, &compiler, ast);
     for(int i = 0; i < globals.count; i++) {
         struct piccolo_ObjString* name = piccolo_copyString(engine, globals.values[i].nameStart, globals.values[i].nameLen);
-        piccolo_setGlobalTable(engine, &package->globalIdxs, name, globals.values[i].slot | (PICCOLO_GLOBAL_SLOT_MUTABLE_BIT * globals.values[i].mutable));
+        piccolo_setGlobalTable(engine, &package->globalIdxs, name, globals.values[i].slot | (PICCOLO_GLOBAL_SLOT_MUTABLE_BIT * globals.values[i].Mutable));
     }
 
     currExpr = ast;
