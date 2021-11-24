@@ -15,7 +15,6 @@
 #include "util/file.h"
 
 #include <stdio.h>
-#include <limits.h>
 
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Upvalue, Upvalue)
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Variable, Variable)
@@ -121,7 +120,7 @@ static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, str
             return engine->packages.values[i];
         }
     }
-    char path[PATH_MAX];
+    char path[4096];
     piccolo_applyRelativePathToFilePath(path, name, nameLen, sourceFilepath);
     for(int i = 0; i < engine->packages.count; i++) {
         if(strcmp(path, engine->packages.values[i]->packageName) == 0) {
