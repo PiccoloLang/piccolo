@@ -50,6 +50,7 @@ struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const
 
     if(!piccolo_compilePackage(engine, package)) {
         piccolo_enginePrintError(engine, "Compilation error.\n");
+        package->compilationError = true;
         return package;
     }
 

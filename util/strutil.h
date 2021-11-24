@@ -10,6 +10,6 @@ struct piccolo_strutil_LineInfo {
     int line;
 };
 
-struct piccolo_strutil_LineInfo piccolo_strutil_getLine(char* source, uint32_t charIdx);
+struct piccolo_strutil_LineInfo piccolo_strutil_getLine(const char* source, uint32_t charIdx);
 
 #endif
