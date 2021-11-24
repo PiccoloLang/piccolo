@@ -9,6 +9,7 @@
 #include "bytecode.h"
 
 PICCOLO_HASHMAP_HEADER(struct piccolo_ObjString*, int, GlobalTable)
+#define PICCOLO_GLOBAL_SLOT_MUTABLE_BIT (1 << 14)
 
 struct piccolo_Package {
     struct piccolo_Obj obj;

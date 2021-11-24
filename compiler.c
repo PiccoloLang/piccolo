@@ -15,6 +15,7 @@
 #include "util/file.h"
 
 #include <stdio.h>
+#include <limits.h>
 
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Upvalue, Upvalue)
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Variable, Variable)
@@ -120,7 +121,7 @@ static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, str
             return engine->packages.values[i];
         }
     }
-    char path[1024];
+    char path[PATH_MAX];
     piccolo_applyRelativePathToFilePath(path, name, nameLen, sourceFilepath);
     for(int i = 0; i < engine->packages.count; i++) {
         if(strcmp(path, engine->packages.values[i]->packageName) == 0) {
@@ -929,7 +930,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     findGlobals(engine, &compiler, ast);
     for(int i = 0; i < globals.count; i++) {
         struct piccolo_ObjString* name = piccolo_copyString(engine, globals.values[i].nameStart, globals.values[i].nameLen);
-        piccolo_setGlobalTable(engine, &package->globalIdxs, name, globals.values[i].slot);
+        piccolo_setGlobalTable(engine, &package->globalIdxs, name, globals.values[i].slot | (PICCOLO_GLOBAL_SLOT_MUTABLE_BIT * globals.values[i].mutable));
     }
 
     currExpr = ast;

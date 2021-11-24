@@ -45,40 +45,59 @@ void piccolo_freeEngine(struct piccolo_Engine* engine) {
     }
 }
 
-static piccolo_Value* getPtrToIdx(struct piccolo_Engine* engine, struct piccolo_Obj* container, piccolo_Value idx) {
+#include <stdio.h>
+static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj* container, piccolo_Value idx, bool set, piccolo_Value value) {
     switch(container->type) {
         case PICCOLO_OBJ_ARRAY: {
             struct piccolo_ObjArray* array = (struct piccolo_ObjArray*)container;
             if(!PICCOLO_IS_NUM(idx)) {
                 piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
-                return NULL;
+                return PICCOLO_NIL_VAL();
             }
             int idxNum = PICCOLO_AS_NUM(idx);
             if(idxNum < 0 || idxNum >= array->array.count) {
                 piccolo_runtimeError(engine, "Array index out of bounds.");
-                return NULL;
+                return PICCOLO_NIL_VAL();
             }
-            return &array->array.values[idxNum];
+
+            if(set) {
+                array->array.values[idxNum] = value;
+                return value;
+            } else {
+                return array->array.values[idxNum];
+            }
+            break;
         }
         case PICCOLO_OBJ_PACKAGE: {
             struct piccolo_Package* package = (struct piccolo_Package*)container;
             if(!PICCOLO_IS_OBJ(idx) || PICCOLO_AS_OBJ(idx)->type != PICCOLO_OBJ_STRING) {
                 piccolo_runtimeError(engine, "Global variable name must be a string.");
-                return NULL;
+                return PICCOLO_NIL_VAL();
                 break;
             }
             struct piccolo_ObjString* varname = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(idx);
             int globalIdx = piccolo_getGlobalTable(engine, &package->globalIdxs, varname);
             if(globalIdx == -1) {
                 piccolo_runtimeError(engine, "Global variable '%.*s' does not exists in package %s", varname->len, varname->string, package->packageName);
-                return NULL;
+                return PICCOLO_NIL_VAL();
             } else {
-                return &package->globals.values[globalIdx];
+                if(set) {
+                    if(globalIdx & PICCOLO_GLOBAL_SLOT_MUTABLE_BIT) {
+                        package->globals.values[globalIdx & (~PICCOLO_GLOBAL_SLOT_MUTABLE_BIT)] = value;
+                        return value;
+                    } else {
+                        piccolo_runtimeError(engine, "Cannot set immutable variable '%.*s'", varname->len, varname->string);
+                        return PICCOLO_NIL_VAL();
+                    }
+                } else {
+                    return package->globals.values[globalIdx & (~PICCOLO_GLOBAL_SLOT_MUTABLE_BIT)];
+                }
             }
+            break;
         }
         default: {
             piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(PICCOLO_OBJ_VAL(container)));
-            return NULL;
+            return PICCOLO_NIL_VAL();
         }
     }
 }
@@ -322,9 +341,8 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
                 } else {
                     struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
-                    piccolo_Value* ptr = getPtrToIdx(engine, containerObj, idx);
-                    if(ptr != NULL)
-                        piccolo_enginePushStack(engine, *ptr);
+                    piccolo_Value value = indexing(engine, containerObj, idx, false, PICCOLO_NIL_VAL());
+                    piccolo_enginePushStack(engine, value);
                 }
                 break;
             }
@@ -336,9 +354,7 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
                 } else {
                     struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
-                    piccolo_Value* ptr = getPtrToIdx(engine, containerObj, idx);
-                    if(ptr != NULL)
-                        *ptr = val;
+                    indexing(engine, containerObj, idx, true, val);
                 }
                 piccolo_enginePushStack(engine, val);
                 break;
