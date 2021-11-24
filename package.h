@@ -13,7 +13,7 @@ PICCOLO_HASHMAP_HEADER(struct piccolo_ObjString*, int, GlobalTable)
 struct piccolo_Package {
     struct piccolo_Obj obj;
     struct piccolo_Bytecode bytecode;
-    const char* source;
+    char* source;
     struct piccolo_ValueArray globals;
     struct piccolo_GlobalTable globalIdxs;
     const char* packageName;

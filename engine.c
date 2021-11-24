@@ -488,7 +488,7 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_APPEND: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
-                struct piccolo_ObjArray* arr = PICCOLO_AS_OBJ(piccolo_enginePeekStack(engine, 1));
+                struct piccolo_ObjArray* arr = (struct piccolo_ObjArray*) PICCOLO_AS_OBJ(piccolo_enginePeekStack(engine, 1));
                 piccolo_writeValueArray(engine, &arr->array, val);
                 break;
             }
@@ -514,7 +514,7 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_GET_LEN: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
                 if(PICCOLO_IS_OBJ(val) && PICCOLO_AS_OBJ(val)->type == PICCOLO_OBJ_ARRAY) {
-                    struct piccolo_ObjArray* arr = PICCOLO_AS_OBJ(val);
+                    struct piccolo_ObjArray* arr = (struct piccolo_ObjArray*) PICCOLO_AS_OBJ(val);
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(arr->array.count));
                     break;
                 }
