@@ -42,13 +42,13 @@
     }                                                \
                                                      \
     static struct piccolo_ ## name ## Entry* find ## name ## Entry(struct piccolo_ ## name ## Entry * entries, int capacity, keyType key) {        \
-        uint32_t index = piccolo_hash ## name ## Key(key) % capacity;                             \
+        uint32_t index = piccolo_hash ## name ## Key(key) & (capacity - 1);                             \
         for(;;) {                                    \
             struct piccolo_ ## name ## Entry* entry = &entries[index];                            \
             if(piccolo_ ## name ## IsBaseKey(entry->key) || piccolo_compare ## name ## Keys(key, entry->key)) {     \
                 return entry;                                                    \
             }                                                   \
-            index = (index + 1) % capacity;\
+            index = (index + 1) & (capacity - 1);\
         }\
     }                                                         \
                                                               \

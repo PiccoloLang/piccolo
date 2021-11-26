@@ -30,12 +30,11 @@ static void printObject(struct piccolo_Obj* obj) {
         bool first = true;
         for(int i = 0; i < hashmap->hashmap.capacity; i++) {
             if(!piccolo_HashmapIsBaseKey(hashmap->hashmap.entries[i].key)) {
+                if(!first)
+                    printf(", ");
                 piccolo_printValue(hashmap->hashmap.entries[i].key);
                 printf(": ");
                 piccolo_printValue(hashmap->hashmap.entries[i].val.value);
-                if(!first)
-                    printf(",");
-                
                 first = false;
             }
         }
