@@ -50,6 +50,7 @@ static struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum picco
     obj->next = engine->objs;
     engine->objs = obj;
     obj->type = type;
+    obj->printed = false;
     return obj;
 }
 

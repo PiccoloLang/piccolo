@@ -20,6 +20,7 @@ struct piccolo_Obj {
     enum piccolo_ObjType type;
     struct piccolo_Obj* next;
     bool marked;
+    bool printed;
 };
 
 struct piccolo_ObjString {

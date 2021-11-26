@@ -10,6 +10,8 @@
 PICCOLO_DYNARRAY_IMPL(piccolo_Value, Value)
 
 static void printObject(struct piccolo_Obj* obj) {
+    bool printed = obj->printed;
+    obj->printed = true;
     if(obj->type == PICCOLO_OBJ_STRING) {
         struct piccolo_ObjString* string = (struct piccolo_ObjString*)obj;
         printf("%.*s", string->len, string->string);
@@ -17,26 +19,34 @@ static void printObject(struct piccolo_Obj* obj) {
     if(obj->type == PICCOLO_OBJ_ARRAY) {
         struct piccolo_ObjArray* array = (struct piccolo_ObjArray*)obj;
         printf("[");
-        for(int i = 0; i < array->array.count; i++) {
-            piccolo_printValue(array->array.values[i]);
-            if(i < array->array.count - 1)
-                printf(", ");
+        if(!printed) {
+            for(int i = 0; i < array->array.count; i++) {
+                piccolo_printValue(array->array.values[i]);
+                if(i < array->array.count - 1)
+                    printf(", ");
+            }
+        } else {
+            printf("...");
         }
         printf("]");
     }
     if(obj->type == PICCOLO_OBJ_HASHMAP) {
         struct piccolo_ObjHashmap* hashmap = (struct piccolo_ObjHashmap*)obj;
         printf("{");
-        bool first = true;
-        for(int i = 0; i < hashmap->hashmap.capacity; i++) {
-            if(!piccolo_HashmapIsBaseKey(hashmap->hashmap.entries[i].key)) {
-                if(!first)
-                    printf(", ");
-                piccolo_printValue(hashmap->hashmap.entries[i].key);
-                printf(": ");
-                piccolo_printValue(hashmap->hashmap.entries[i].val.value);
-                first = false;
+        if(!printed) {
+            bool first = true;
+            for(int i = 0; i < hashmap->hashmap.capacity; i++) {
+                if(!piccolo_HashmapIsBaseKey(hashmap->hashmap.entries[i].key)) {
+                    if(!first)
+                        printf(", ");
+                    piccolo_printValue(hashmap->hashmap.entries[i].key);
+                    printf(": ");
+                    piccolo_printValue(hashmap->hashmap.entries[i].val.value);
+                    first = false;
+                }
             }
+        } else {
+            printf("...");
         }
         printf("}");
     }
@@ -53,6 +63,7 @@ static void printObject(struct piccolo_Obj* obj) {
         struct piccolo_Package* package = ((struct piccolo_Package*)obj);
         printf("<package \"%s\">", package->packageName);
     }
+    obj->printed = false;
 }
 
 void piccolo_printValue(piccolo_Value value) {
