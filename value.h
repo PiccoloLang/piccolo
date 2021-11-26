@@ -43,4 +43,6 @@ PICCOLO_DYNARRAY_HEADER(piccolo_Value, Value)
 void piccolo_printValue(piccolo_Value value);
 char* piccolo_getTypeName(piccolo_Value value);
 
+bool piccolo_valuesEqual(struct piccolo_Value a, struct piccolo_Value b);
+
 #endif

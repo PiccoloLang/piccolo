@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <time.h>
+#include <stdlib.h>
 
 static piccolo_Value printNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
     for(int i = 0; i < argc; i++) {
@@ -82,6 +83,40 @@ void piccolo_addTimeLib(struct piccolo_Engine* engine) {
     piccolo_defineGlobal(engine, time, "sleep", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sleepNative)));
 }
 
+static piccolo_Value minNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+    if(argc != 2) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+        return PICCOLO_NIL_VAL();
+    }
+    piccolo_Value aVal = argv[0];
+    piccolo_Value bVal = argv[1];
+    if(!PICCOLO_IS_NUM(aVal) || !PICCOLO_IS_NUM(bVal)) {
+        piccolo_runtimeError(engine, "Both arguments must be numbers.");
+        return PICCOLO_NIL_VAL();
+    }
+
+    double a = PICCOLO_AS_NUM(aVal);
+    double b = PICCOLO_AS_NUM(bVal);
+    return PICCOLO_NUM_VAL(a < b ? a : b);
+}
+
+static piccolo_Value maxNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+    if(argc != 2) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+        return PICCOLO_NIL_VAL();
+    }
+    piccolo_Value aVal = argv[0];
+    piccolo_Value bVal = argv[1];
+    if(!PICCOLO_IS_NUM(aVal) || !PICCOLO_IS_NUM(bVal)) {
+        piccolo_runtimeError(engine, "Both arguments must be numbers.");
+        return PICCOLO_NIL_VAL();
+    }
+
+    double a = PICCOLO_AS_NUM(aVal);
+    double b = PICCOLO_AS_NUM(bVal);
+    return PICCOLO_NUM_VAL(a > b ? a : b);
+}
+
 static piccolo_Value mapNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
     if(argc != 5) {
         piccolo_runtimeError(engine, "Wrong argument count.");
@@ -153,11 +188,28 @@ static piccolo_Value tanNative(struct piccolo_Engine* engine, int argc, piccolo_
 void piccolo_addMathLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* math = piccolo_createPackage(engine);
     math->packageName = "math";
-    piccolo_defineGlobal(engine, math, "pi", PICCOLO_NUM_VAL(3.14159265359));
+    piccolo_defineGlobal(engine, math, "min", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, minNative)));
+    piccolo_defineGlobal(engine, math, "max", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, maxNative)));
     piccolo_defineGlobal(engine, math, "map", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, mapNative)));
+    piccolo_defineGlobal(engine, math, "pi", PICCOLO_NUM_VAL(3.14159265359));
     piccolo_defineGlobal(engine, math, "sin", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sinNative)));
     piccolo_defineGlobal(engine, math, "cos", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, cosNative)));
     piccolo_defineGlobal(engine, math, "tan", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, tanNative)));
+}
+
+static piccolo_Value randomValNative(struct piccolo_Engine* engine, int argc, piccolo_Value argv) {
+    if(argc != 0) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+        return PICCOLO_NIL_VAL();
+    }
+    double val = (double)rand() / RAND_MAX;
+    return PICCOLO_NUM_VAL(val);
+}
+
+void piccolo_addRandomLib(struct piccolo_Engine* engine) {
+    struct piccolo_Package* random = piccolo_createPackage(engine);
+    random->packageName = "random";
+    piccolo_defineGlobal(engine, random, "val", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, randomValNative)));
 }
 
 #include "../debug/disassembler.h"

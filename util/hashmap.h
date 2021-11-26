@@ -26,7 +26,8 @@
     void piccolo_set ## name(struct piccolo_Engine* engine, struct piccolo_ ## name * hashmap, keyType key, valType val); \
     valType piccolo_get ## name(struct piccolo_Engine* engine, struct piccolo_ ## name * hashmap, keyType key);                                                 \
     uint32_t piccolo_hash ## name ## Key(keyType key); \
-    bool piccolo_compare ## name ## Keys(keyType a, keyType b);
+    bool piccolo_compare ## name ## Keys(keyType a, keyType b); \
+    bool piccolo_ ## name ## IsBaseKey(keyType key);
 
 #define PICCOLO_HASHMAP_IMPL(keyType, valType, name, baseKey, baseVal) \
     void piccolo_init ## name(struct piccolo_ ## name * hashmap) { \
@@ -44,7 +45,7 @@
         uint32_t index = piccolo_hash ## name ## Key(key) % capacity;                             \
         for(;;) {                                    \
             struct piccolo_ ## name ## Entry* entry = &entries[index];                            \
-            if(entry->key == baseKey || piccolo_compare ## name ## Keys(key, entry->key)) {     \
+            if(piccolo_ ## name ## IsBaseKey(entry->key) || piccolo_compare ## name ## Keys(key, entry->key)) {     \
                 return entry;                                                    \
             }                                                   \
             index = (index + 1) % capacity;\
@@ -55,12 +56,12 @@
         struct piccolo_ ## name ## Entry* entries = PICCOLO_ALLOCATE(engine, struct piccolo_ ## name ## Entry, capacity);                   \
         for(int i = 0; i < capacity; i++) {                   \
             entries[i].key = baseKey;                                   \
-            entries[i].val = baseVal; \
+            entries[i].val = (baseVal); \
         }                                                              \
                                                                        \
         for(int i = 0; i < hashmap->capacity; i++) {                     \
             struct piccolo_ ## name ## Entry* entry = &hashmap->entries[i];                         \
-            if(entry->key == baseKey) continue;                        \
+            if(piccolo_ ## name ## IsBaseKey(entry->key)) continue;                        \
                                                                        \
             struct piccolo_ ## name ## Entry* dest = find ## name ## Entry(entries, capacity, entry->key);                    \
             dest->key = entry->key;                                    \
@@ -79,7 +80,7 @@
             adjust ## name ## Capacity(engine, hashmap, capacity);\
         }\
         struct piccolo_ ## name ## Entry* entry = find ## name ## Entry(hashmap->entries, hashmap->capacity, key);    \
-        if(entry->key == baseKey)                                      \
+        if(piccolo_ ## name ## IsBaseKey(entry->key))                                      \
             hashmap->count++;\
         entry->key = key;                                       \
         entry->val = val;\
@@ -87,10 +88,10 @@
                                                                        \
     valType piccolo_get ## name(struct piccolo_Engine* engine, struct piccolo_ ## name * hashmap, keyType key) {                 \
         if(hashmap->count == 0)                                        \
-            return baseVal;                           \
+            return (baseVal);                           \
         struct piccolo_ ## name ## Entry* entry = find ## name ## Entry(hashmap->entries, hashmap->capacity, key);            \
-        if(entry->key == baseKey)                                      \
-            return baseVal;                                               \
+        if(piccolo_ ## name ## IsBaseKey(entry->key))                                      \
+            return (baseVal);                                               \
         return entry->val;\
     }\
 

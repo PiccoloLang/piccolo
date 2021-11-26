@@ -178,6 +178,10 @@ struct piccolo_Token piccolo_nextToken(struct piccolo_Scanner* scanner) {
             scanner->start = scanner->current;
             return piccolo_nextToken(scanner);
         }
+        case ':': {
+            scanner->current++;
+            return makeToken(scanner, PICCOLO_TOKEN_COLON);
+        }
         case '\n': {
             scanner->current++;
             return makeToken(scanner, PICCOLO_TOKEN_NEWLINE);

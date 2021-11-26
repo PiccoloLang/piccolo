@@ -48,6 +48,8 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         SIMPLE_INSTRUCTION(OP_GET_IDX)
         SIMPLE_INSTRUCTION(OP_SET_IDX)
 
+        SIMPLE_INSTRUCTION(OP_HASHMAP)
+
         PARAM_INSTRUCTION(OP_GET_GLOBAL)
         PARAM_INSTRUCTION(OP_SET_GLOBAL)
         PARAM_INSTRUCTION(OP_GET_LOCAL)

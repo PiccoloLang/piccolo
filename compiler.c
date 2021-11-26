@@ -208,6 +208,18 @@ static void markReqEval(struct piccolo_ExprNode* expr) {
             }
             break;
         }
+        case PICCOLO_EXPR_HASHMAP_LITERAL: {
+            struct piccolo_HashmapLiteralNode* hashmap = (struct piccolo_HashmapLiteralNode*)expr;
+            struct piccolo_HashmapEntryNode* curr = hashmap->first;
+            while(curr != NULL) {
+                curr->key->reqEval = expr->reqEval;
+                markReqEval(curr->key);
+                curr->value->reqEval = expr->reqEval;
+                markReqEval(curr->value);
+                curr = (struct piccolo_HashmapEntryNode*)curr->expr.nextExpr;
+            }
+            break;
+        }
         case PICCOLO_EXPR_SUBSCRIPT: {
             struct piccolo_SubscriptNode* subscript = (struct piccolo_SubscriptNode*)expr;
             subscript->value->reqEval = true;
@@ -416,6 +428,20 @@ static void compileArrayLiteral(struct piccolo_ArrayLiteralNode* arrayLiteral, C
     }
     if(arrayLiteral->expr.reqEval)
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, count, 0);
+}
+
+static void compileHashmapLiteral(struct piccolo_HashmapLiteralNode* hashmapLiteral, COMPILE_PARAMS) {
+    if(hashmapLiteral->expr.reqEval)
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_HASHMAP, 0);
+    struct piccolo_HashmapEntryNode* curr = hashmapLiteral->first;
+    while(curr != NULL) {
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, 1, 0);
+        compileExpr(curr->key, COMPILE_ARGS);
+        compileExpr(curr->value, COMPILE_ARGS);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SET_IDX, 0);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, 0);
+        curr = (struct piccolo_HashmapEntryNode*)curr->expr.nextExpr;
+    }
 }
 
 static void compileSubscript(struct piccolo_SubscriptNode* subscript, COMPILE_PARAMS) {
@@ -640,21 +666,12 @@ static void compileIndexSet(struct piccolo_IndexSetNode* indexSet, COMPILE_PARAM
 }
 
 /*
-    If only true expression:
-
-    - condition -
-    jump if false to end
-    - trueExpr -
-    end:
-
-    If true and false expressions:
-
     - condition -
     jump if false to skipTrue
     - trueExpr -
     jump to end
     skipTrue:
-    - falseExpr -
+    - falseExpr(nil if not specified) -
     end:
 */
 static void compileIf(struct piccolo_IfNode* ifNode, COMPILE_PARAMS) {
@@ -665,17 +682,20 @@ static void compileIf(struct piccolo_IfNode* ifNode, COMPILE_PARAMS) {
     compileExpr(ifNode->trueVal, COMPILE_ARGS);
 
     int skipFalseAddr = bytecode->code.count;
-    if(ifNode->falseVal != NULL)
-        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP, 0, ifNode->conditionCharIdx);
+    piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP, 0, ifNode->conditionCharIdx);
 
     int falseStartAddr = bytecode->code.count;
     piccolo_patchParam(bytecode, skipTrueAddr, falseStartAddr - skipTrueAddr);
 
     if(ifNode->falseVal != NULL) {
         compileExpr(ifNode->falseVal, COMPILE_ARGS);
-        int endAddr = bytecode->code.count;
-        piccolo_patchParam(bytecode, skipFalseAddr, endAddr - skipFalseAddr);
+    } else {
+        if(ifNode->expr.reqEval)
+            piccolo_writeConst(engine, bytecode, PICCOLO_NIL_VAL(), 0);
     }
+
+    int endAddr = bytecode->code.count;
+    piccolo_patchParam(bytecode, skipFalseAddr, endAddr - skipFalseAddr);
 }
 
 static void compileWhile(struct piccolo_WhileNode* whileNode, COMPILE_PARAMS) {
@@ -838,6 +858,10 @@ static void compileExpr(struct piccolo_ExprNode* expr, COMPILE_PARAMS) {
             compileArrayLiteral((struct piccolo_ArrayLiteralNode*)expr, COMPILE_ARGS);
             break;
         }
+        case PICCOLO_EXPR_HASHMAP_LITERAL: {
+            compileHashmapLiteral((struct piccolo_HashmapLiteralNode*)expr, COMPILE_ARGS);
+            break;
+        }
         case PICCOLO_EXPR_SUBSCRIPT: {
             compileSubscript((struct piccolo_SubscriptNode*)expr, COMPILE_ARGS);
             break;
@@ -906,7 +930,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     piccolo_initScanner(&scanner, package->source);
 
     struct piccolo_Parser parser;
-    piccolo_initParser(engine, &parser, &scanner);
+    piccolo_initParser(engine, &parser, &scanner, package);
     struct piccolo_ExprNode* ast = piccolo_parse(engine, &parser);
 
     if(parser.hadError) {
@@ -938,11 +962,11 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
         currExpr = currExpr->nextExpr;
     }
 
-    //piccolo_printExpr(ast, 0);
+    // piccolo_printExpr(ast, 0);
     piccolo_freeParser(engine, &parser);
 
     piccolo_writeBytecode(engine, &package->bytecode, PICCOLO_OP_RETURN, 0);
-    // piccolo_disassembleBytecode(&package->bytecode);
+    //piccolo_disassembleBytecode(&package->bytecode);
 
     package->compiled = true;
 

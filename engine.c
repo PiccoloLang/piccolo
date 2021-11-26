@@ -68,6 +68,24 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
             }
             break;
         }
+        case PICCOLO_OBJ_HASHMAP: {
+            struct piccolo_ObjHashmap* hashmap = (struct piccolo_ObjHashmap*)container;
+            if(set) {
+                struct piccolo_HashmapValue val;
+                val.exists = true;
+                val.value = value;
+                piccolo_setHashmap(engine, &hashmap->hashmap, idx, val);
+                return value;
+            } else {
+                struct piccolo_HashmapValue result = piccolo_getHashmap(engine, &hashmap->hashmap, idx);
+                if(result.exists) {
+                    return result.value;
+                } else {
+                    piccolo_runtimeError(engine, "Key does not exist on map.");
+                }
+            }
+            break;
+        }
         case PICCOLO_OBJ_PACKAGE: {
             struct piccolo_Package* package = (struct piccolo_Package*)container;
             if(!PICCOLO_IS_OBJ(idx) || PICCOLO_AS_OBJ(idx)->type != PICCOLO_OBJ_STRING) {
@@ -246,31 +264,7 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_EQUAL: {
                 piccolo_Value a = piccolo_enginePopStack(engine);
                 piccolo_Value b = piccolo_enginePopStack(engine);
-                if(PICCOLO_IS_NUM(a) && PICCOLO_IS_NUM(b)) {
-                    piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(PICCOLO_AS_NUM(a) == PICCOLO_AS_NUM(b)));
-                    break;
-                }
-                if(PICCOLO_IS_BOOL(a) && PICCOLO_IS_BOOL(b)) {
-                    piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(PICCOLO_AS_BOOL(a) == PICCOLO_AS_BOOL(b)));
-                    break;
-                }
-                if(PICCOLO_IS_NIL(a) && PICCOLO_IS_NIL(b)) {
-                    piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(true));
-                    break;
-                }
-                if(PICCOLO_IS_OBJ(a) && PICCOLO_IS_OBJ(b)) {
-                    struct piccolo_Obj* aObj = PICCOLO_AS_OBJ(a);
-                    struct piccolo_Obj* bObj = PICCOLO_AS_OBJ(b);
-                    if(aObj->type == PICCOLO_OBJ_STRING && bObj->type == PICCOLO_OBJ_STRING) {
-                        struct piccolo_ObjString* aStr = (struct piccolo_ObjString*)aObj;
-                        struct piccolo_ObjString* bStr = (struct piccolo_ObjString*)bObj;
-                        if(aStr->len == bStr->len && strncmp(aStr->string, bStr->string, aStr->len) == 0) {
-                            piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(true));
-                            break;
-                        }
-                    }
-                }
-                piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(false));
+                piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(piccolo_valuesEqual(a, b)));
                 break;
             }
             case PICCOLO_OP_GREATER: {
@@ -374,6 +368,12 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value b = piccolo_enginePopStack(engine);
                 piccolo_enginePushStack(engine, a);
                 piccolo_enginePushStack(engine, b);
+                break;
+            }
+            case PICCOLO_OP_HASHMAP: {
+                struct piccolo_ObjHashmap* hashmap = piccolo_newHashmap(engine);
+                struct piccolo_HashmapValue val;
+                piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(hashmap));
                 break;
             }
             case PICCOLO_OP_GET_LOCAL: {
@@ -617,7 +617,7 @@ void piccolo_runtimeError(struct piccolo_Engine* engine, const char* format, ...
     va_start(args, format);
     engine->printError(format, args);
     va_end(args);
-    piccolo_enginePrintError(engine, "\n");
+    piccolo_enginePrintError(engine, " [%s]\n", engine->frames[engine->currFrame].package->packageName);
 
     int charIdx = engine->frames[engine->currFrame].bytecode->charIdxs.values[engine->frames[engine->currFrame].prevIp];
     struct piccolo_strutil_LineInfo opLine = piccolo_strutil_getLine(engine->frames[engine->currFrame].package->source, charIdx);

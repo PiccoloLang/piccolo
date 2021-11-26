@@ -6,11 +6,24 @@ static void markValue(piccolo_Value value);
 static void markObj(struct piccolo_Obj* obj) {
     if(obj == NULL)
         return;
+    if(obj->marked)
+        return;
+    obj->marked = true;
     switch(obj->type) {
         case PICCOLO_OBJ_ARRAY: {
             struct piccolo_ObjArray* array = (struct piccolo_ObjArray*)obj;
             for(int i = 0; i < array->array.count; i++)
                 markValue(array->array.values[i]);
+            break;
+        }
+        case PICCOLO_OBJ_HASHMAP: {
+            struct piccolo_ObjHashmap* hashmap = (struct piccolo_ObjHashmap*)obj;
+            for(int i = 0; i < hashmap->hashmap.capacity; i++) {
+                if(!piccolo_HashmapIsBaseKey(hashmap->hashmap.entries[i].key)) {
+                    markValue(hashmap->hashmap.entries[i].key);
+                    markValue(hashmap->hashmap.entries[i].val.value);
+                }
+            }
             break;
         }
         case PICCOLO_OBJ_FUNC: {
@@ -34,7 +47,6 @@ static void markObj(struct piccolo_Obj* obj) {
         case PICCOLO_OBJ_NATIVE_FN: break;
         case PICCOLO_OBJ_PACKAGE: break;
     }
-    obj->marked = true;
 }
 
 static void markValue(piccolo_Value value) {

@@ -11,6 +11,8 @@ PICCOLO_DYNARRAY_HEADER(struct piccolo_Token, Token)
 enum piccolo_ExprNodeType {
     PICCOLO_EXPR_LITERAL,
     PICCOLO_EXPR_ARRAY_LITERAL,
+    PICCOLO_EXPR_HASHMAP_ENTRY,
+    PICCOLO_EXPR_HASHMAP_LITERAL,
     PICCOLO_EXPR_VAR,
     PICCOLO_EXPR_RANGE,
     PICCOLO_EXPR_SUBSCRIPT,
@@ -49,6 +51,17 @@ struct piccolo_LiteralNode {
 struct piccolo_ArrayLiteralNode {
     struct piccolo_ExprNode expr;
     struct piccolo_ExprNode* first;
+};
+
+struct piccolo_HashmapEntryNode {
+    struct piccolo_ExprNode expr;
+    struct piccolo_ExprNode* key;
+    struct piccolo_ExprNode* value;
+};
+
+struct piccolo_HashmapLiteralNode {
+    struct piccolo_ExprNode expr;
+    struct piccolo_HashmapEntryNode* first;
 };
 
 struct piccolo_VarNode {
@@ -168,9 +181,10 @@ struct piccolo_Parser {
     struct piccolo_ExprNode* nodes;
     struct piccolo_Token currToken;
     bool cycled, hadError;
+    struct piccolo_Package* package;
 };
 
-void piccolo_initParser(struct piccolo_Engine* engine, struct piccolo_Parser* parser, struct piccolo_Scanner* scanner);
+void piccolo_initParser(struct piccolo_Engine* engine, struct piccolo_Parser* parser, struct piccolo_Scanner* scanner, struct piccolo_Package* package);
 void piccolo_freeParser(struct piccolo_Engine* engine, struct piccolo_Parser* parser);
 
 struct piccolo_ExprNode* piccolo_parse(struct piccolo_Engine* engine, struct piccolo_Parser* parser);

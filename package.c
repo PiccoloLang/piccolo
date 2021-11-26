@@ -18,6 +18,10 @@ bool piccolo_compareGlobalTableKeys(struct piccolo_ObjString* a, struct piccolo_
     return strcmp(a->string, b->string) == 0;
 }
 
+bool piccolo_GlobalTableIsBaseKey(struct piccolo_ObjString* key) {
+    return key == NULL;
+}
+
 PICCOLO_HASHMAP_IMPL(struct piccolo_ObjString*, int, GlobalTable, NULL, -1)
 
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {

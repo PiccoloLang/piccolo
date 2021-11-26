@@ -8,6 +8,7 @@
 enum piccolo_ObjType {
     PICCOLO_OBJ_STRING,
     PICCOLO_OBJ_ARRAY,
+    PICCOLO_OBJ_HASHMAP,
     PICCOLO_OBJ_FUNC,
     PICCOLO_OBJ_UPVAL,
     PICCOLO_OBJ_CLOSURE,
@@ -31,6 +32,19 @@ struct piccolo_ObjString {
 struct piccolo_ObjArray {
     struct piccolo_Obj obj;
     struct piccolo_ValueArray array;
+};
+
+#include "util/hashmap.h"
+struct piccolo_HashmapValue {
+    piccolo_Value value;
+    bool exists;
+};
+
+PICCOLO_HASHMAP_HEADER(piccolo_Value, struct piccolo_HashmapValue, Hashmap)
+
+struct piccolo_ObjHashmap {
+    struct piccolo_Obj obj;
+    struct piccolo_Hashmap hashmap;
 };
 
 struct piccolo_ObjFunction {
@@ -66,6 +80,7 @@ void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj);
 struct piccolo_ObjString* piccolo_takeString(struct piccolo_Engine* engine, char* string);
 struct piccolo_ObjString* piccolo_copyString(struct piccolo_Engine* engine, const char* string, int len);
 struct piccolo_ObjArray* piccolo_newArray(struct piccolo_Engine* engine, int len);
+struct piccolo_ObjHashmap* piccolo_newHashmap(struct piccolo_Engine* engine);
 struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine);
 struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo_Value* ptr);
 struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, struct piccolo_ObjFunction* function, int upvals);

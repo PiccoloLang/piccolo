@@ -26,6 +26,7 @@ static void parsingError(struct piccolo_Engine* engine, struct piccolo_Parser* p
     va_start(args, format);
     engine->printError(format, args);
     va_end(args);
+    piccolo_enginePrintError(engine, " [%s]", parser->package->packageName);
     int charIdx = parser->currToken.charIdx;
     struct piccolo_strutil_LineInfo line = piccolo_strutil_getLine(parser->scanner->source, charIdx);
     piccolo_enginePrintError(engine, "\n[line %d] %.*s\n", line.line + 1, line.lineEnd - line.lineStart, line.lineStart);
@@ -110,6 +111,110 @@ struct piccolo_ExprNode* parseExprList(struct piccolo_Engine* engine, struct pic
     return first;
 }
 
+static struct piccolo_ExprNode* parseBlock(PARSER_PARAMS) {
+    advanceParser(engine, parser);
+    while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+        advanceParser(engine, parser);
+    
+    if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+        advanceParser(engine, parser);
+        struct piccolo_HashmapLiteralNode* hashmap = ALLOCATE_NODE(parser, HashmapLiteral, PICCOLO_EXPR_HASHMAP_LITERAL);
+        hashmap->first = NULL;
+        return (struct piccolo_ExprNode*)hashmap;
+    }
+
+    struct piccolo_ExprNode* firstExpr = parseExpr(PARSER_ARGS);
+    while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+        advanceParser(engine, parser);
+    
+    if(parser->currToken.type == PICCOLO_TOKEN_COLON) {
+        advanceParser(engine, parser);
+        struct piccolo_ExprNode* firstValue = parseExpr(PARSER_ARGS_REQ_VAL);
+        while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+            advanceParser(engine, parser);
+        if(parser->currToken.type == PICCOLO_TOKEN_COMMA) {
+            advanceParser(engine, parser);
+            while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+                advanceParser(engine, parser);
+            if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+                parsingError(engine, parser, "Expected expression.");
+            }
+        } else if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+
+        } else {
+            parsingError(engine, parser, "Expected comma.");
+        }
+        struct piccolo_HashmapEntryNode* firstEntry = ALLOCATE_NODE(parser, HashmapEntry, PICCOLO_EXPR_HASHMAP_ENTRY);
+        firstEntry->key = firstExpr;
+        firstEntry->value = firstValue;
+        struct piccolo_HashmapEntryNode* curr = firstEntry;
+
+        while(parser->currToken.type != PICCOLO_TOKEN_RIGHT_BRACE) {
+            if(parser->currToken.type == PICCOLO_TOKEN_EOF) {
+                parsingError(engine, parser, "Expected }.");
+                break;
+            }
+
+            struct piccolo_ExprNode* key = parseExpr(PARSER_ARGS_REQ_VAL);
+            while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+                advanceParser(engine, parser);
+            if(parser->currToken.type == PICCOLO_TOKEN_COLON) {
+                advanceParser(engine, parser);
+            } else {
+                parsingError(engine, parser, "Expected :.");
+            }
+            if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+                parsingError(engine, parser, "Expected expression.");
+                break;
+            }
+            struct piccolo_ExprNode* value = parseExpr(PARSER_ARGS_REQ_VAL);
+            while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+                advanceParser(engine, parser);
+
+            struct piccolo_HashmapEntryNode* entry = ALLOCATE_NODE(parser, HashmapEntry, PICCOLO_EXPR_HASHMAP_ENTRY);
+            entry->expr.nextExpr = NULL;
+            entry->key = key;
+            entry->value = value;
+            curr->expr.nextExpr = (struct piccolo_ExprNode*)entry;
+            curr = entry;
+
+            while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+                advanceParser(engine, parser);
+            if(parser->currToken.type == PICCOLO_TOKEN_COMMA) {
+                advanceParser(engine, parser);
+                while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+                    advanceParser(engine, parser);
+                if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+                    parsingError(engine, parser, "Expected expression.");
+                }
+            } else if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+
+            } else {
+                parsingError(engine, parser, "Expected comma.");
+            }
+        }
+        advanceParser(engine, parser);
+
+        struct piccolo_HashmapLiteralNode* hashmap = ALLOCATE_NODE(parser, HashmapLiteral, PICCOLO_EXPR_HASHMAP_LITERAL);
+        hashmap->first = firstEntry;
+        
+        return (struct piccolo_ExprNode*)hashmap;
+
+    } else {
+        struct piccolo_ExprNode* exprs = parseExprList(engine, parser, true);
+        if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_BRACE) {
+            advanceParser(engine, parser);
+        } else {
+            parsingError(engine, parser, "Expected }.");
+        }
+        struct piccolo_BlockNode* block = ALLOCATE_NODE(parser, Block, PICCOLO_EXPR_BLOCK);
+        firstExpr->nextExpr = exprs;
+        block->first = firstExpr;
+        return (struct piccolo_ExprNode*)block;
+    }
+    return NULL;
+}
+
 static struct piccolo_ExprNode* parseLiteral(PARSER_PARAMS) {
     SKIP_NEWLINES()
     if(parser->currToken.type == PICCOLO_TOKEN_NUM ||
@@ -137,16 +242,7 @@ static struct piccolo_ExprNode* parseLiteral(PARSER_PARAMS) {
         return value;
     }
     if(parser->currToken.type == PICCOLO_TOKEN_LEFT_BRACE) {
-        advanceParser(engine, parser);
-        struct piccolo_ExprNode* exprs = parseExprList(engine, parser, true);
-        if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_BRACE) {
-            advanceParser(engine, parser);
-        } else {
-            parsingError(engine, parser, "Expected }.");
-        }
-        struct piccolo_BlockNode* block = ALLOCATE_NODE(parser, Block, PICCOLO_EXPR_BLOCK);
-        block->first = exprs;
-        return (struct piccolo_ExprNode*)block;
+        return parseBlock(PARSER_ARGS);
     }
 
     if(parser->cycled) {
@@ -384,6 +480,9 @@ static struct piccolo_ExprNode* parseCall(PARSER_PARAMS) {
                 curr = arg;
             }
 
+            while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+                advanceParser(engine, parser);
+            
             if(parser->currToken.type == PICCOLO_TOKEN_COMMA) {
                 advanceParser(engine, parser);
                 if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_PAREN) {
@@ -610,11 +709,12 @@ struct piccolo_ExprNode* piccolo_parse(struct piccolo_Engine* engine, struct pic
     return parseExprList(engine, parser, false);
 }
 
-void piccolo_initParser(struct piccolo_Engine* engine, struct piccolo_Parser* parser, struct piccolo_Scanner* scanner) {
+void piccolo_initParser(struct piccolo_Engine* engine, struct piccolo_Parser* parser, struct piccolo_Scanner* scanner, struct piccolo_Package* package) {
     parser->scanner = scanner;
     parser->nodes = NULL;
     parser->hadError = false;
     parser->cycled = false;
+    parser->package = package;
     advanceParser(engine, parser);
 }
 

@@ -5,6 +5,8 @@
 #include "package.h"
 #include "debug/disassembler.h"
 
+#include <string.h>
+
 PICCOLO_DYNARRAY_IMPL(piccolo_Value, Value)
 
 static void printObject(struct piccolo_Obj* obj) {
@@ -21,6 +23,23 @@ static void printObject(struct piccolo_Obj* obj) {
                 printf(", ");
         }
         printf("]");
+    }
+    if(obj->type == PICCOLO_OBJ_HASHMAP) {
+        struct piccolo_ObjHashmap* hashmap = (struct piccolo_ObjHashmap*)obj;
+        printf("{");
+        bool first = true;
+        for(int i = 0; i < hashmap->hashmap.capacity; i++) {
+            if(!piccolo_HashmapIsBaseKey(hashmap->hashmap.entries[i].key)) {
+                piccolo_printValue(hashmap->hashmap.entries[i].key);
+                printf(": ");
+                piccolo_printValue(hashmap->hashmap.entries[i].val.value);
+                if(!first)
+                    printf(",");
+                
+                first = false;
+            }
+        }
+        printf("}");
     }
     if(obj->type == PICCOLO_OBJ_FUNC) {
         printf("<fn>");
@@ -71,6 +90,8 @@ char* piccolo_getTypeName(piccolo_Value value) {
             return "string";
         if(type == PICCOLO_OBJ_ARRAY)
             return "array";
+        if(type == PICCOLO_OBJ_HASHMAP)
+            return "hashmap";
         if(type == PICCOLO_OBJ_FUNC)
             return "raw fn";
         if(type == PICCOLO_OBJ_CLOSURE)
@@ -81,4 +102,28 @@ char* piccolo_getTypeName(piccolo_Value value) {
             return "package";
     }
     return "Unknown";
+}
+
+bool piccolo_valuesEqual(struct piccolo_Value a, struct piccolo_Value b) {
+    if(PICCOLO_IS_NUM(a) && PICCOLO_IS_NUM(b)) {
+        return PICCOLO_AS_NUM(a) == PICCOLO_AS_NUM(b);
+    }
+    if(PICCOLO_IS_BOOL(a) && PICCOLO_IS_BOOL(b)) {
+        return PICCOLO_AS_BOOL(a) == PICCOLO_AS_BOOL(b);
+    }
+    if(PICCOLO_IS_NIL(a) && PICCOLO_IS_NIL(b)) {
+        return true;
+    }
+    if(PICCOLO_IS_OBJ(a) && PICCOLO_IS_OBJ(b)) {
+        struct piccolo_Obj* aObj = PICCOLO_AS_OBJ(a);
+        struct piccolo_Obj* bObj = PICCOLO_AS_OBJ(b);
+        if(aObj->type == PICCOLO_OBJ_STRING && bObj->type == PICCOLO_OBJ_STRING) {
+            struct piccolo_ObjString* aStr = (struct piccolo_ObjString*)aObj;
+            struct piccolo_ObjString* bStr = (struct piccolo_ObjString*)bObj;
+            if(aStr->len == bStr->len && strncmp(aStr->string, bStr->string, aStr->len) == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
 }

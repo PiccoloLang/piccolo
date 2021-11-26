@@ -34,6 +34,25 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
             piccolo_printExpr(arrayLiteral->first, offset + 1);
             break;
         }
+        case PICCOLO_EXPR_HASHMAP_ENTRY: {
+            struct piccolo_HashmapEntryNode* entry = (struct piccolo_HashmapEntryNode*)expr;
+            printf("HASHMAP ENTRY\n");
+            for(int i = 0; i < offset + 2; i++)
+                printf("    ");
+            printf("KEY\n");
+            piccolo_printExpr(entry->key, offset + 2);
+            for(int i = 0; i < offset + 2; i++)
+                printf("    ");
+            printf("VALUE\n");
+            piccolo_printExpr(entry->value, offset + 2);
+            break;
+        }
+        case PICCOLO_EXPR_HASHMAP_LITERAL: {
+            struct piccolo_HashmapLiteralNode* hashmap = (struct piccolo_HashmapLiteralNode*)expr;
+            printf("HASHMAP\n");
+            piccolo_printExpr(hashmap->first, offset + 1);
+            break;
+        }
         case PICCOLO_EXPR_SUBSCRIPT: {
             struct piccolo_SubscriptNode* subscript = (struct piccolo_SubscriptNode*)expr;
             printf("SUBSCRIPT %.*s\n", (int)subscript->subscript.length, subscript->subscript.start);

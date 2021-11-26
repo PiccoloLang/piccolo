@@ -5,6 +5,26 @@
 #include "package.h"
 #include <string.h>
 
+uint32_t piccolo_hashHashmapKey(piccolo_Value key) {
+    return 0;
+}
+
+bool piccolo_compareHashmapKeys(piccolo_Value a, piccolo_Value b) {
+    return piccolo_valuesEqual(a, b);
+}
+
+bool piccolo_HashmapIsBaseKey(piccolo_Value key) {
+    return PICCOLO_IS_NIL(key);
+}
+
+static inline struct piccolo_HashmapValue getBase() {
+    struct piccolo_HashmapValue result;
+    result.exists = false;
+    return result;
+}
+
+PICCOLO_HASHMAP_IMPL(piccolo_Value, struct piccolo_HashmapValue, Hashmap, PICCOLO_NIL_VAL(), (getBase()))
+
 static struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjType type, size_t size) {
     struct piccolo_Obj* obj = PICCOLO_REALLOCATE("obj", engine, NULL, 0, size);
     obj->next = engine->objs;
@@ -26,6 +46,11 @@ void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj) {
         case PICCOLO_OBJ_ARRAY: {
             objSize = sizeof(struct piccolo_ObjArray);
             piccolo_freeValueArray(engine, &((struct piccolo_ObjArray*)obj)->array);
+            break;
+        }
+        case PICCOLO_OBJ_HASHMAP: {
+            objSize = sizeof(struct piccolo_ObjHashmap);
+            piccolo_freeHashmap(engine, &((struct piccolo_ObjHashmap*)obj)->hashmap);
             break;
         }
         case PICCOLO_OBJ_FUNC: {
@@ -89,6 +114,12 @@ struct piccolo_ObjArray* piccolo_newArray(struct piccolo_Engine* engine, int len
     for(int i = 0; i < len; i++)
         piccolo_writeValueArray(engine, &array->array, PICCOLO_NIL_VAL());
     return array;
+}
+
+struct piccolo_ObjHashmap* piccolo_newHashmap(struct piccolo_Engine* engine) {
+    struct piccolo_ObjHashmap* hashmap = ALLOCATE_OBJ(engine, struct piccolo_ObjHashmap, PICCOLO_OBJ_HASHMAP);
+    piccolo_initHashmap(&hashmap->hashmap);
+    return hashmap;
 }
 
 struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine) {
