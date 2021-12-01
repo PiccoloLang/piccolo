@@ -275,21 +275,6 @@ static struct piccolo_ExprNode* parseVar(PARSER_PARAMS) {
     return parseLiteral(PARSER_ARGS);
 }
 
-static struct piccolo_ExprNode* parseRange(PARSER_PARAMS) {
-    SKIP_NEWLINES()
-    struct piccolo_ExprNode* left = parseVar(PARSER_ARGS);
-    if(parser->currToken.type == PICCOLO_TOKEN_DOT_DOT) {
-        int charIdx = parser->currToken.charIdx;
-        advanceParser(engine, parser);
-        struct piccolo_ExprNode* right = parseRange(PARSER_ARGS);
-        struct piccolo_RangeNode* range = ALLOCATE_NODE(parser, Range, PICCOLO_EXPR_RANGE);
-        range->left = left;
-        range->right = right;
-        range->charIdx = charIdx;
-        return (struct piccolo_ExprNode*)range;
-    }
-    return left;
-}
 
 static struct piccolo_ExprNode* parseArrayLiteral(PARSER_PARAMS) {
     SKIP_NEWLINES()
@@ -328,7 +313,7 @@ static struct piccolo_ExprNode* parseArrayLiteral(PARSER_PARAMS) {
         arrayLiteral->first = first;
         return (struct piccolo_ExprNode*)arrayLiteral;
     }
-    return parseRange(PARSER_ARGS);
+    return parseVar(PARSER_ARGS);
 }
 
 static struct piccolo_ExprNode* parseImport(PARSER_PARAMS) {
@@ -522,9 +507,25 @@ static struct piccolo_ExprNode* parseUnary(PARSER_PARAMS) {
     return parseCall(PARSER_ARGS);
 }
 
+static struct piccolo_ExprNode* parseRange(PARSER_PARAMS) {
+    SKIP_NEWLINES()
+    struct piccolo_ExprNode* left = parseUnary(PARSER_ARGS);
+    if(parser->currToken.type == PICCOLO_TOKEN_DOT_DOT) {
+        int charIdx = parser->currToken.charIdx;
+        advanceParser(engine, parser);
+        struct piccolo_ExprNode* right = parseRange(PARSER_ARGS);
+        struct piccolo_RangeNode* range = ALLOCATE_NODE(parser, Range, PICCOLO_EXPR_RANGE);
+        range->left = left;
+        range->right = right;
+        range->charIdx = charIdx;
+        return (struct piccolo_ExprNode*)range;
+    }
+    return left;
+}
+
 static struct piccolo_ExprNode* parseMultiplicative(PARSER_PARAMS) {
     SKIP_NEWLINES()
-    struct piccolo_ExprNode* expr = parseUnary(PARSER_ARGS);
+    struct piccolo_ExprNode* expr = parseRange(PARSER_ARGS);
     while(parser->currToken.type == PICCOLO_TOKEN_STAR ||
           parser->currToken.type == PICCOLO_TOKEN_SLASH ||
           parser->currToken.type == PICCOLO_TOKEN_PERCENT) {
