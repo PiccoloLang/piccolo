@@ -54,6 +54,8 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         PARAM_INSTRUCTION(OP_SET_GLOBAL)
         PARAM_INSTRUCTION(OP_GET_LOCAL)
         PARAM_INSTRUCTION(OP_SET_LOCAL)
+        SIMPLE_INSTRUCTION(OP_PUSH_LOCAL)
+        PARAM_INSTRUCTION(OP_POP_LOCALS)
 
         PARAM_INSTRUCTION(OP_JUMP)
         PARAM_INSTRUCTION(OP_JUMP_FALSE)

@@ -10,7 +10,7 @@
 #include "object.h"
 #include "gc.h"
 
-//#define PICCOLO_ENABLE_ENGINE_DEBUG
+// #define PICCOLO_ENABLE_ENGINE_DEBUG
 
 #ifdef PICCOLO_ENABLE_ENGINE_DEBUG
 #include <stdio.h>
@@ -20,6 +20,7 @@
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Package*, Package)
 
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list)) {
+    engine->localCnt = 0;
     engine->printError = printError;
     engine->stackTop = engine->stack;
     engine->openUpvals = NULL;
@@ -28,6 +29,8 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     engine->objs = NULL;
     engine->currFrame = -1;
     piccolo_initPackageArray(&engine->packages);
+    for(int i = 0; i < 256; i++)
+        engine->frames[i].closure = NULL;
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     engine->track = NULL;
 #endif
@@ -142,7 +145,7 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
 }
 
 static bool shouldCloseUpval(struct piccolo_Engine* engine, struct piccolo_ObjUpval* upval) {
-    return upval->valPtr >= engine->frames[engine->currFrame].varStack && upval->valPtr < engine->frames[engine->currFrame].varStack + 256;
+    return upval->valPtr >= engine->locals + engine->localCnt;
 }
 
 static bool run(struct piccolo_Engine* engine) {
@@ -399,12 +402,23 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_GET_LOCAL: {
                 int slot = READ_PARAM();
-                piccolo_enginePushStack(engine, engine->frames[engine->currFrame].varStack[slot]);
+                int realSlot = slot + engine->frames[engine->currFrame].localStart;
+                piccolo_enginePushStack(engine, engine->locals[realSlot]);
                 break;
             }
             case PICCOLO_OP_SET_LOCAL: {
                 int slot = READ_PARAM();
-                engine->frames[engine->currFrame].varStack[slot] = piccolo_enginePeekStack(engine, 1);
+                int realSlot = slot + engine->frames[engine->currFrame].localStart;
+                engine->locals[realSlot] = piccolo_enginePeekStack(engine, 1);
+                break;
+            }
+            case PICCOLO_OP_PUSH_LOCAL: {
+                engine->locals[engine->localCnt] = piccolo_enginePeekStack(engine, 1);
+                engine->localCnt++;
+                break;
+            }
+            case PICCOLO_OP_POP_LOCALS: {
+                engine->localCnt -= READ_PARAM();
                 break;
             }
             case PICCOLO_OP_GET_GLOBAL: {
@@ -458,8 +472,10 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_CALL: {
                 int argCount = READ_PARAM();
                 engine->currFrame++;
+                engine->frames[engine->currFrame].localStart = engine->localCnt;
                 for(int i = argCount - 1; i >= 0; i--) {
-                    engine->frames[engine->currFrame].varStack[i] = piccolo_enginePopStack(engine);
+                    engine->locals[engine->frames[engine->currFrame].localStart + i] = piccolo_enginePopStack(engine);
+                    engine->localCnt++;
                 }
                 piccolo_Value func = piccolo_enginePopStack(engine);
 
@@ -492,7 +508,8 @@ static bool run(struct piccolo_Engine* engine) {
                 if(type == PICCOLO_OBJ_NATIVE_FN) {
                     struct piccolo_ObjNativeFn* native = (struct piccolo_ObjNativeFn*)PICCOLO_AS_OBJ(func);
                     engine->currFrame--;
-                    piccolo_enginePushStack(engine, native->native(engine, argCount, engine->frames[engine->currFrame + 1].varStack));
+                    piccolo_enginePushStack(engine, native->native(engine, argCount, &engine->locals[engine->frames[engine->currFrame + 1].localStart]));
+                    engine->localCnt -= argCount;
                     break;
                 }
                 break;
@@ -505,7 +522,7 @@ static bool run(struct piccolo_Engine* engine) {
                 for(int i = 0; i < upvals; i++) {
                     int slot = READ_PARAM();
                     if(READ_BYTE())
-                        closure->upvals[i] = piccolo_newUpval(engine, &engine->frames[engine->currFrame].varStack[slot]);
+                        closure->upvals[i] = piccolo_newUpval(engine, &engine->locals[engine->frames[engine->currFrame].localStart + slot]);
                     else
                         closure->upvals[i] = engine->frames[engine->currFrame].closure->upvals[slot];
                 }
@@ -586,9 +603,17 @@ static bool run(struct piccolo_Engine* engine) {
         }
 #ifdef PICCOLO_ENABLE_ENGINE_DEBUG
         piccolo_disassembleInstruction(engine->frames[engine->currFrame].bytecode, engine->frames[engine->currFrame].prevIp);
+        printf("DATA STACK:\n");
         for(piccolo_Value* stackPtr = engine->stack; stackPtr != engine->stackTop; stackPtr++) {
             printf("[");
             piccolo_printValue(*stackPtr);
+            printf("] ");
+        }
+        printf("\n");
+        printf("LOCAL STACK:\n");
+        for(int i = 0; i < engine->localCnt; i++) {
+            printf("[");
+            piccolo_printValue(engine->locals[i]);
             printf("] ");
         }
         printf("\n");
@@ -614,6 +639,7 @@ bool piccolo_executePackage(struct piccolo_Engine* engine, struct piccolo_Packag
 }
 
 bool piccolo_executeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode) {
+    engine->frames[engine->currFrame].localStart = 0;
     engine->frames[engine->currFrame].ip = 0;
     engine->frames[engine->currFrame].bytecode = bytecode;
     engine->stackTop = engine->stack;

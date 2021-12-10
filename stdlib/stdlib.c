@@ -265,10 +265,16 @@ static piccolo_Value printAssertionResultsNative(struct piccolo_Engine* engine, 
     return PICCOLO_NIL_VAL();
 }
 
+static piccolo_Value breakpointNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+
+    return PICCOLO_NIL_VAL();
+}
+
 void piccolo_addDebugLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* debug = piccolo_createPackage(engine);
     debug->packageName = "debug";
     piccolo_defineGlobal(engine, debug, "disassemble", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, disassembleFunctionNative)));
     piccolo_defineGlobal(engine, debug, "assert", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, assertNative)));
     piccolo_defineGlobal(engine, debug, "printAssertionResults", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, printAssertionResultsNative)));
+    piccolo_defineGlobal(engine, debug, "breakpoint", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, breakpointNative)));
 }

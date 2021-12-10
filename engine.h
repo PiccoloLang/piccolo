@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 struct piccolo_CallFrame {
-    piccolo_Value varStack[256];
+    int localStart;
     int prevIp;
     int ip;
     struct piccolo_Bytecode* bytecode;
@@ -21,6 +21,8 @@ PICCOLO_DYNARRAY_HEADER(struct piccolo_Package*, Package)
 struct piccolo_Engine {
     struct piccolo_PackageArray packages;
 
+    piccolo_Value locals[256];
+    int localCnt;
     piccolo_Value stack[256];
     piccolo_Value* stackTop;
     struct piccolo_CallFrame frames[256];

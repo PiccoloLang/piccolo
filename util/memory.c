@@ -3,6 +3,8 @@
 #include "../engine.h"
 #include <stdlib.h>
 
+#include <stdio.h>
+
 void* piccolo_reallocate(struct piccolo_Engine* engine, void* data, size_t oldSize, size_t newSize) {
     engine->liveMemory += newSize - oldSize;
     if(newSize == 0) {

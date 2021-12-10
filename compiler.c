@@ -573,6 +573,7 @@ static void compileBlock(struct piccolo_BlockNode* block, COMPILE_PARAMS) {
             compileExpr(curr, engine, bytecode, compiler, true);
             curr = curr->nextExpr;
         }
+        piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_POP_LOCALS, compiler->locals.count - localCount, 0);
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_CLOSE_UPVALS, 0);
         compiler->locals.count = localCount;
     }
@@ -589,6 +590,7 @@ static void compileFnLiteral(struct piccolo_FnLiteralNode* fnLiteral, COMPILE_PA
     struct piccolo_ObjFunction* function = piccolo_newFunction(engine);
     function->arity = fnLiteral->params.count;
     compileExpr(fnLiteral->value, engine, &function->bytecode, &fnCompiler, false);
+    piccolo_writeParameteredBytecode(engine, &function->bytecode, PICCOLO_OP_POP_LOCALS, fnLiteral->params.count, 0);
     piccolo_writeBytecode(engine, &function->bytecode, PICCOLO_OP_CLOSE_UPVALS, 0);
     piccolo_writeBytecode(engine, &function->bytecode, PICCOLO_OP_RETURN, 0);
 
@@ -617,7 +619,7 @@ static void compileVarDecl(struct piccolo_VarDeclNode* varDecl, COMPILE_PARAMS) 
             struct piccolo_Variable var = createVar(varDecl->name, slot);
             var.Mutable = varDecl->mutable;
             piccolo_writeVariableArray(engine, &compiler->locals, var);
-            piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_SET_LOCAL, slot, varDecl->name.charIdx);
+            piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_PUSH_LOCAL, 0);
         }
     } else { // Think globally
         int slot = getGlobalSlot(compiler, varDecl->name);
@@ -756,6 +758,9 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
         struct piccolo_Variable var = createVar(forNode->name, slot);
         var.Mutable = false;
         piccolo_writeVariableArray(engine, &compiler->locals, var);
+        piccolo_writeConst(engine, bytecode, PICCOLO_NIL_VAL(), 0);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_PUSH_LOCAL, 0);
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, 0);
     }
 
     compileExpr(forNode->container, COMPILE_ARGS); // container
@@ -805,6 +810,8 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
     }
     
     piccolo_patchParam(bytecode, breakLoopAddr, loopEndAddr - breakLoopAddr);
+
+    piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_POP_LOCALS, 1, 0);
 
     if(varData.slot == -1) {
         compiler->locals.count--;
@@ -966,7 +973,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     piccolo_freeParser(engine, &parser);
 
     piccolo_writeBytecode(engine, &package->bytecode, PICCOLO_OP_RETURN, 0);
-    //piccolo_disassembleBytecode(&package->bytecode);
+    // piccolo_disassembleBytecode(&package->bytecode);
 
     package->compiled = true;
 
