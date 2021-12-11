@@ -72,7 +72,7 @@ void piccolo_printValue(piccolo_Value value) {
         return;
     }
     if(PICCOLO_IS_NUM(value)) {
-        printf("%f", PICCOLO_AS_NUM(value));
+        printf("%g", PICCOLO_AS_NUM(value));
         return;
     }
     if(PICCOLO_IS_BOOL(value)) {

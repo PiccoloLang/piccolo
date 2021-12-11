@@ -590,6 +590,7 @@ static bool run(struct piccolo_Engine* engine) {
                 if(!package->executed && package->compiled) {
                     engine->currFrame++;
                     engine->frames[engine->currFrame].package = package;
+                    engine->frames[engine->currFrame].closure = NULL;
                     package->executed = true;
                     engine->frames[engine->currFrame].ip = 0;
                     engine->frames[engine->currFrame].bytecode = &package->bytecode;
