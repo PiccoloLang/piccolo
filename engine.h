@@ -21,8 +21,7 @@ PICCOLO_DYNARRAY_HEADER(struct piccolo_Package*, Package)
 struct piccolo_Engine {
     struct piccolo_PackageArray packages;
 
-    piccolo_Value locals[256];
-    int localCnt;
+    struct piccolo_ValueArray locals;
     piccolo_Value stack[256];
     piccolo_Value* stackTop;
     struct piccolo_CallFrame frames[256];

@@ -20,7 +20,7 @@
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Package*, Package)
 
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list)) {
-    engine->localCnt = 0;
+    piccolo_initValueArray(&engine->locals);
     engine->printError = printError;
     engine->stackTop = engine->stack;
     engine->openUpvals = NULL;
@@ -145,7 +145,7 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
 }
 
 static bool shouldCloseUpval(struct piccolo_Engine* engine, struct piccolo_ObjUpval* upval) {
-    return upval->valPtr >= engine->locals + engine->localCnt;
+    return upval->valPtr >= engine->locals.values + engine->locals.count;
 }
 
 static bool run(struct piccolo_Engine* engine) {
@@ -403,22 +403,21 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_GET_LOCAL: {
                 int slot = READ_PARAM();
                 int realSlot = slot + engine->frames[engine->currFrame].localStart;
-                piccolo_enginePushStack(engine, engine->locals[realSlot]);
+                piccolo_enginePushStack(engine, engine->locals.values[realSlot]);
                 break;
             }
             case PICCOLO_OP_SET_LOCAL: {
                 int slot = READ_PARAM();
                 int realSlot = slot + engine->frames[engine->currFrame].localStart;
-                engine->locals[realSlot] = piccolo_enginePeekStack(engine, 1);
+                engine->locals.values[realSlot] = piccolo_enginePeekStack(engine, 1);
                 break;
             }
             case PICCOLO_OP_PUSH_LOCAL: {
-                engine->locals[engine->localCnt] = piccolo_enginePeekStack(engine, 1);
-                engine->localCnt++;
+                piccolo_writeValueArray(engine, &engine->locals, piccolo_enginePeekStack(engine, 1));
                 break;
             }
             case PICCOLO_OP_POP_LOCALS: {
-                engine->localCnt -= READ_PARAM();
+                engine->locals.count -= READ_PARAM();
                 break;
             }
             case PICCOLO_OP_GET_GLOBAL: {
@@ -472,10 +471,11 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_CALL: {
                 int argCount = READ_PARAM();
                 engine->currFrame++;
-                engine->frames[engine->currFrame].localStart = engine->localCnt;
+                engine->frames[engine->currFrame].localStart = engine->locals.count;
+                for(int i = 0; i < argCount; i++)
+                    piccolo_writeValueArray(engine, &engine->locals, PICCOLO_NIL_VAL());
                 for(int i = argCount - 1; i >= 0; i--) {
-                    engine->locals[engine->frames[engine->currFrame].localStart + i] = piccolo_enginePopStack(engine);
-                    engine->localCnt++;
+                    engine->locals.values[engine->frames[engine->currFrame].localStart + i] = piccolo_enginePopStack(engine);
                 }
                 piccolo_Value func = piccolo_enginePopStack(engine);
 
@@ -508,8 +508,8 @@ static bool run(struct piccolo_Engine* engine) {
                 if(type == PICCOLO_OBJ_NATIVE_FN) {
                     struct piccolo_ObjNativeFn* native = (struct piccolo_ObjNativeFn*)PICCOLO_AS_OBJ(func);
                     engine->currFrame--;
-                    piccolo_enginePushStack(engine, native->native(engine, argCount, &engine->locals[engine->frames[engine->currFrame + 1].localStart]));
-                    engine->localCnt -= argCount;
+                    piccolo_enginePushStack(engine, native->native(engine, argCount, &engine->locals.values[engine->frames[engine->currFrame + 1].localStart]));
+                    engine->locals.count -= argCount;
                     break;
                 }
                 break;
@@ -522,7 +522,7 @@ static bool run(struct piccolo_Engine* engine) {
                 for(int i = 0; i < upvals; i++) {
                     int slot = READ_PARAM();
                     if(READ_BYTE())
-                        closure->upvals[i] = piccolo_newUpval(engine, &engine->locals[engine->frames[engine->currFrame].localStart + slot]);
+                        closure->upvals[i] = piccolo_newUpval(engine, &engine->locals.values[engine->frames[engine->currFrame].localStart + slot]);
                     else
                         closure->upvals[i] = engine->frames[engine->currFrame].closure->upvals[slot];
                 }

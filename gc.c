@@ -76,8 +76,8 @@ static void markRoots(struct piccolo_Engine* engine) {
         if(engine->frames[i].closure != NULL)
             markObj((struct piccolo_Obj*)engine->frames[i].closure);
     }
-    for(int i = 0; i < engine->localCnt; i++)
-        markValue(engine->locals[i]);
+    for(int i = 0; i < engine->locals.count; i++)
+        markValue(engine->locals.values[i]);
     for(int i = 0; i < engine->packages.count; i++)
         markPackage(engine->packages.values[i]);
 }
