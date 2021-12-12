@@ -342,8 +342,56 @@ static void markReqEval(struct piccolo_ExprNode* expr) {
 
 static void findGlobals(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_ExprNode* ast) {
     struct piccolo_ExprNode *curr = ast;
-    while (curr != NULL) {
-        switch (curr->type) {
+    while(curr != NULL) {
+        switch(curr->type) {
+            case PICCOLO_EXPR_BINARY: {
+                struct piccolo_BinaryNode* binary = (struct piccolo_BinaryNode*)curr;
+                findGlobals(engine, compiler, binary->a);
+                findGlobals(engine, compiler, binary->b);
+                break;
+            }
+            case PICCOLO_EXPR_ARRAY_LITERAL: {
+                struct piccolo_ArrayLiteralNode* arrayLiteral = (struct piccolo_ArrayLiteralNode*)curr;
+                findGlobals(engine, compiler, arrayLiteral->first);
+                break;
+            }
+            case PICCOLO_EXPR_HASHMAP_ENTRY: {
+                struct piccolo_HashmapEntryNode* hashmapEntry = (struct piccolo_HashmapEntryNode*)curr;
+                findGlobals(engine, compiler, hashmapEntry->key);
+                findGlobals(engine, compiler, hashmapEntry->value);
+                break;
+            }
+            case PICCOLO_EXPR_HASHMAP_LITERAL: {
+                struct piccolo_HashmapLiteralNode* hashmap = (struct piccolo_HashmapLiteralNode*)curr;
+                findGlobals(engine, compiler, (struct piccolo_ExprNode*)hashmap->first);
+                break;
+            }
+            case PICCOLO_EXPR_RANGE: {
+                struct piccolo_RangeNode* range = (struct piccolo_RangeNode*)curr;
+                findGlobals(engine, compiler, range->left);
+                findGlobals(engine, compiler, range->right);
+                break;
+            }
+            case PICCOLO_EXPR_SUBSCRIPT: {
+                struct piccolo_SubscriptNode* subscript = (struct piccolo_SubscriptNode*)curr;
+                findGlobals(engine, compiler, subscript->value);
+                break;
+            }
+            case PICCOLO_EXPR_INDEX: {
+                struct piccolo_IndexNode* index = (struct piccolo_IndexNode*)curr;
+                findGlobals(engine, compiler, index->target);
+                break;
+            }
+            case PICCOLO_EXPR_UNARY: {
+                struct piccolo_UnaryNode* unary = (struct piccolo_UnaryNode*)curr;
+                findGlobals(engine, compiler, unary->value);
+                break;
+            }
+            case PICCOLO_EXPR_VAR_SET: {
+                struct piccolo_VarSetNode* varSet = (struct piccolo_VarSetNode*)curr;
+                findGlobals(engine, compiler, varSet->value);
+                break;
+            }
             case PICCOLO_EXPR_VAR_DECL: {
                 struct piccolo_VarDeclNode* varDecl = (struct piccolo_VarDeclNode*)curr;
                 if(getGlobalSlot(compiler, varDecl->name) != -1) {
@@ -353,10 +401,41 @@ static void findGlobals(struct piccolo_Engine* engine, struct piccolo_Compiler* 
                     var.Mutable = varDecl->mutable;
                     piccolo_writeVariableArray(engine, compiler->globals, var);
                 }
+                findGlobals(engine, compiler, varDecl->value);
                 break;
             }
-            default:
+            case PICCOLO_EXPR_SUBSCRIPT_SET: {
+                struct piccolo_SubscriptSetNode* subscriptSet = (struct piccolo_SubscriptSetNode*)curr;
+                findGlobals(engine, compiler, subscriptSet->value);
+                findGlobals(engine, compiler, subscriptSet->target);
                 break;
+            }
+            case PICCOLO_EXPR_INDEX_SET: {
+                struct piccolo_IndexSetNode* indexSet = (struct piccolo_IndexSetNode*)curr;
+                findGlobals(engine, compiler, indexSet->target);
+                findGlobals(engine, compiler, indexSet->value);
+                break;
+            }
+            case PICCOLO_EXPR_IF: {
+                struct piccolo_IfNode* ifNode = (struct piccolo_IfNode*)curr;
+                findGlobals(engine, compiler, ifNode->condition);
+                break;
+            }
+            case PICCOLO_EXPR_WHILE: {
+                struct piccolo_WhileNode* whileNode = (struct piccolo_WhileNode*)curr;
+                findGlobals(engine, compiler, whileNode->condition);
+                break;
+            }
+            case PICCOLO_EXPR_FOR: {
+                struct piccolo_ForNode* forNode = (struct piccolo_ForNode*)curr;
+                findGlobals(engine, compiler, forNode->container);
+                break;
+            }
+            case PICCOLO_EXPR_CALL: {
+                struct piccolo_CallNode* callNode = (struct piccolo_CallNode*)curr;
+                findGlobals(engine, compiler, callNode->function);
+                break;
+            }
         }
         curr = curr->nextExpr;
     }
@@ -969,11 +1048,11 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
         currExpr = currExpr->nextExpr;
     }
 
-    // piccolo_printExpr(ast, 0);
+//    piccolo_printExpr(ast, 0);
     piccolo_freeParser(engine, &parser);
 
     piccolo_writeBytecode(engine, &package->bytecode, PICCOLO_OP_RETURN, 0);
-    // piccolo_disassembleBytecode(&package->bytecode);
+//    piccolo_disassembleBytecode(&package->bytecode);
 
     package->compiled = true;
 
