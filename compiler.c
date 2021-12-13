@@ -856,7 +856,7 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
     int loopStartAddr = bytecode->code.count;
     
     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, peekDist, forNode->charIdx);
-    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_LEN, forNode->charIdx);
+    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_LEN, forNode->containerCharIdx);
     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, peekDist, forNode->charIdx);
     piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GREATER, forNode->charIdx);
     int breakLoopAddr = bytecode->code.count;

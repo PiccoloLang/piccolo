@@ -162,6 +162,7 @@ struct piccolo_ForNode {
     struct piccolo_ExprNode* container;
     struct piccolo_ExprNode* value;
     int charIdx;
+    int containerCharIdx;
 };
 
 struct piccolo_CallNode {

@@ -689,6 +689,7 @@ static struct piccolo_ExprNode* parseFor(PARSER_PARAMS) {
         } else {
             advanceParser(engine, parser);
         }
+        int containerCharIdx = parser->currToken.charIdx;
         struct piccolo_ExprNode* container = parseExpr(PARSER_ARGS_REQ_VAL);
         struct piccolo_ExprNode* value = parseExpr(PARSER_ARGS_REQ_VAL);
 
@@ -696,6 +697,8 @@ static struct piccolo_ExprNode* parseFor(PARSER_PARAMS) {
         forNode->container = container;
         forNode->name = name;
         forNode->value = value;
+        forNode->containerCharIdx = containerCharIdx;
+        forNode->charIdx = charIdx;
         return (struct piccolo_ExprNode*)forNode;
     }
     return parseWhile(PARSER_ARGS);
