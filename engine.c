@@ -58,7 +58,20 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
                 return PICCOLO_NIL_VAL();
             }
             if(!PICCOLO_IS_NUM(idx)) {
-                piccolo_runtimeError(engine, "Cannot index string with %s.", piccolo_getTypeName(idx));
+                if(PICCOLO_IS_OBJ(idx) && PICCOLO_AS_OBJ(idx)->type == PICCOLO_OBJ_STRING) {
+                    struct piccolo_ObjString* str = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(idx);
+                    if(str->len == 6 && strcmp(str->string, "length") == 0) {
+                        if(set) {
+                            piccolo_runtimeError(engine, "Cannot set string length.");
+                        } else {
+                            return PICCOLO_NUM_VAL(string->len);
+                        }
+                    } else {
+                        piccolo_runtimeError(engine, "Cannot index string with %s.", piccolo_getTypeName(idx));
+                    }
+                } else {
+                    piccolo_runtimeError(engine, "Cannot index string with %s.", piccolo_getTypeName(idx));
+                }
                 return PICCOLO_NIL_VAL();
             }
             int idxNum = PICCOLO_AS_NUM(idx);
@@ -75,7 +88,20 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
         case PICCOLO_OBJ_ARRAY: {
             struct piccolo_ObjArray* array = (struct piccolo_ObjArray*)container;
             if(!PICCOLO_IS_NUM(idx)) {
-                piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
+                if(PICCOLO_IS_OBJ(idx) && PICCOLO_AS_OBJ(idx)->type == PICCOLO_OBJ_STRING) {
+                    struct piccolo_ObjString* str = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(idx);
+                    if(str->len == 6 && strcmp(str->string, "length") == 0) {
+                        if(set) {
+                            piccolo_runtimeError(engine, "Cannot set array length.");
+                        } else {
+                            return PICCOLO_NUM_VAL(array->array.count);
+                        }
+                    } else {
+                        piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
+                    }
+                } else {
+                    piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
+                }
                 return PICCOLO_NIL_VAL();
             }
             int idxNum = PICCOLO_AS_NUM(idx);
