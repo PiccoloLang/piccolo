@@ -663,8 +663,13 @@ static void compileFnLiteral(struct piccolo_FnLiteralNode* fnLiteral, COMPILE_PA
     initCompiler(&fnCompiler, compiler->package, compiler->globals);
     fnCompiler.enclosing = compiler;
     for(int i = 0; i < fnLiteral->params.count; i++) {
-        struct piccolo_Variable var = createVar(fnLiteral->params.values[i], fnCompiler.locals.count);
-        piccolo_writeVariableArray(engine, &fnCompiler.locals, var);
+        struct variableData varData = getVariable(engine, compiler, fnLiteral->params.values[i]);
+        if(varData.slot == -1) {
+            struct piccolo_Variable var = createVar(fnLiteral->params.values[i], fnCompiler.locals.count);
+            piccolo_writeVariableArray(engine, &fnCompiler.locals, var);
+        } else {
+            compilationError(engine, compiler, fnLiteral->params.values[i].charIdx, "Variable '%.*s' already defined.", fnLiteral->params.values[i].length, fnLiteral->params.values[i].start);
+        }
     }
     struct piccolo_ObjFunction* function = piccolo_newFunction(engine);
     function->arity = fnLiteral->params.count;

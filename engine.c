@@ -501,7 +501,8 @@ static bool run(struct piccolo_Engine* engine) {
                 for(int i = 0; i < argCount; i++)
                     piccolo_writeValueArray(engine, &engine->locals, PICCOLO_NIL_VAL());
                 for(int i = argCount - 1; i >= 0; i--) {
-                    engine->locals.values[engine->frames[engine->currFrame].localStart + i] = piccolo_enginePopStack(engine);
+                    piccolo_Value arg = piccolo_enginePopStack(engine);
+                    engine->locals.values[engine->frames[engine->currFrame].localStart + i] = arg;
                 }
                 piccolo_Value func = piccolo_enginePopStack(engine);
 
