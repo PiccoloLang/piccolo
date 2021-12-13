@@ -531,7 +531,7 @@ static struct piccolo_ExprNode* parseMultiplicative(PARSER_PARAMS) {
           parser->currToken.type == PICCOLO_TOKEN_PERCENT) {
         struct piccolo_Token op = parser->currToken;
         advanceParser(engine, parser);
-        struct piccolo_ExprNode* rightHand = parseMultiplicative(PARSER_ARGS_REQ_VAL);
+        struct piccolo_ExprNode* rightHand = parseRange(PARSER_ARGS_REQ_VAL);
         struct piccolo_BinaryNode* binary = ALLOCATE_NODE(parser, Binary, PICCOLO_EXPR_BINARY);
         binary->a = expr;
         binary->op = op;
@@ -548,7 +548,7 @@ static struct piccolo_ExprNode* parseAdditive(PARSER_PARAMS) {
           parser->currToken.type == PICCOLO_TOKEN_MINUS) {
         struct piccolo_Token op = parser->currToken;
         advanceParser(engine, parser);
-        struct piccolo_ExprNode* rightHand = parseAdditive(PARSER_ARGS_REQ_VAL);
+        struct piccolo_ExprNode* rightHand = parseMultiplicative(PARSER_ARGS_REQ_VAL);
         struct piccolo_BinaryNode* binary = ALLOCATE_NODE(parser, Binary, PICCOLO_EXPR_BINARY);
         binary->a = expr;
         binary->op = op;

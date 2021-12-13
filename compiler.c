@@ -1048,7 +1048,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
         currExpr = currExpr->nextExpr;
     }
 
-//    piccolo_printExpr(ast, 0);
+   piccolo_printExpr(ast, 0);
     piccolo_freeParser(engine, &parser);
 
     piccolo_writeBytecode(engine, &package->bytecode, PICCOLO_OP_RETURN, 0);
