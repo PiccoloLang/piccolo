@@ -49,7 +49,7 @@ enum piccolo_OpCode {
     PICCOLO_OP_APPEND,
 
     PICCOLO_OP_EXECUTE_PACKAGE
-} piccolo_OpCode;
+};
 
 PICCOLO_DYNARRAY_HEADER(uint8_t, Byte)
 PICCOLO_DYNARRAY_HEADER(int, Int)
