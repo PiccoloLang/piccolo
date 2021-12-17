@@ -130,7 +130,18 @@ static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, str
 
     const char* source = piccolo_readFile(path);
     if(source == NULL) {
-        return NULL;
+        for(int i = 0; i < engine->searchPaths.count; i++) {
+            piccolo_applyRelativePathToFilePath(path, name, nameLen, engine->searchPaths.values[i]);
+            for(int j = 0; j < engine->packages.count; j++) {
+                if(strcmp(path, engine->packages.values[j]->packageName) == 0) {
+                    return engine->packages.values[j];
+                }
+            }
+
+            source = piccolo_readFile(path);
+            if(source != NULL)
+                break;
+        }
     }
     struct piccolo_Package* package = piccolo_createPackage(engine);
     int pathLen = (int)strlen(path);

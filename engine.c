@@ -18,6 +18,7 @@
 #endif
 
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Package*, Package)
+PICCOLO_DYNARRAY_IMPL(const char*, String)
 
 void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const char* format, va_list)) {
     piccolo_initValueArray(&engine->locals);
@@ -31,6 +32,7 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     piccolo_initPackageArray(&engine->packages);
     for(int i = 0; i < 256; i++)
         engine->frames[i].closure = NULL;
+    piccolo_initStringArray(&engine->searchPaths);
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     engine->track = NULL;
 #endif
@@ -46,6 +48,8 @@ void piccolo_freeEngine(struct piccolo_Engine* engine) {
         curr = curr->next;
         piccolo_freeObj(engine, toFree);
     }
+    piccolo_freeValueArray(engine, &engine->locals);
+    piccolo_freeStringArray(engine, &engine->searchPaths);
 }
 
 #include <stdio.h>

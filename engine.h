@@ -17,6 +17,7 @@ struct piccolo_CallFrame {
 };
 
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Package*, Package)
+PICCOLO_DYNARRAY_HEADER(const char*, String)
 
 struct piccolo_Engine {
     struct piccolo_PackageArray packages;
@@ -35,6 +36,8 @@ struct piccolo_Engine {
     void (*printError)(const char* format, va_list);
 
     struct piccolo_ObjUpval* openUpvals;
+
+    struct piccolo_StringArray searchPaths;
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     struct piccolo_MemoryTrack* track;
 #endif
