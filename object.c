@@ -3,6 +3,7 @@
 #include "util/memory.h"
 #include "engine.h"
 #include "package.h"
+#include "util/strutil.h"
 #include <string.h>
 #include <stdio.h>
 #include <limits.h>
@@ -114,6 +115,12 @@ static struct piccolo_ObjString* newString(struct piccolo_Engine* engine, char* 
     struct piccolo_ObjString* result = (struct piccolo_ObjString*) ALLOCATE_OBJ(engine, struct piccolo_ObjString, PICCOLO_OBJ_STRING);
     result->string = string;
     result->len = len;
+    result->utf8Len = 0;
+    const char* curr = string;
+    while(*curr != '\0') {
+        result->utf8Len++;
+        curr += piccolo_strutil_utf8Chars(*curr);
+    }
     result->hash = hashString(string, len);
     return result;
 }

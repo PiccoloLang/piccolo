@@ -52,6 +52,7 @@ void piccolo_freeEngine(struct piccolo_Engine* engine) {
     piccolo_freeStringArray(engine, &engine->searchPaths);
 }
 
+
 #include <stdio.h>
 static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj* container, piccolo_Value idx, bool set, piccolo_Value value) {
     switch(container->type) {
@@ -68,7 +69,7 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
                         if(set) {
                             piccolo_runtimeError(engine, "Cannot set string length.");
                         } else {
-                            return PICCOLO_NUM_VAL(string->len);
+                            return PICCOLO_NUM_VAL(string->utf8Len);
                         }
                     } else {
                         piccolo_runtimeError(engine, "Cannot index string with %s.", piccolo_getTypeName(idx));
@@ -83,10 +84,18 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
                 piccolo_runtimeError(engine, "Index %d out of bounds.", idxNum);
                 return PICCOLO_NIL_VAL();
             }
-            char str[2];
-            str[0] = string->string[idxNum]; // TODO: Add unicode support
-            str[1] = '\0';
-            struct piccolo_ObjString* result = piccolo_copyString(engine, str, 1);
+
+            const char* curr = string->string;
+            for(int i = 0; i < idxNum; i++) {
+                curr += piccolo_strutil_utf8Chars(*curr);
+            }
+            char str[5];
+
+            int charCnt = piccolo_strutil_utf8Chars(*curr);
+            for(int i = 0; i < charCnt; i++)
+                str[i] = curr[i];
+            str[charCnt] = '\0';
+            struct piccolo_ObjString* result = piccolo_copyString(engine, str, charCnt);
             return  PICCOLO_OBJ_VAL(result);
         }
         case PICCOLO_OBJ_ARRAY: {
@@ -602,7 +611,7 @@ static bool run(struct piccolo_Engine* engine) {
                     struct piccolo_Obj* obj = PICCOLO_AS_OBJ(val);
                     if(obj->type == PICCOLO_OBJ_STRING) {
                         struct piccolo_ObjString* str = (struct piccolo_ObjString*)obj;
-                        piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(str->len));
+                        piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(str->utf8Len));
                         break;
                     }
                     if(obj->type == PICCOLO_OBJ_ARRAY) {

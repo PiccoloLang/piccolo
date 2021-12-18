@@ -16,3 +16,13 @@ struct piccolo_strutil_LineInfo piccolo_strutil_getLine(const char* source, uint
         lineInfo.lineEnd++;
     return lineInfo;
 }
+
+int piccolo_strutil_utf8Chars(char c) {
+    if((c & 0xF8) == 0xF0)
+        return 4;
+    if((c & 0xF0) == 0xE0)
+        return 3;
+    if((c & 0xE0) == 0xC0)
+        return 2;
+    return 1;
+}

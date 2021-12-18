@@ -26,7 +26,8 @@ struct piccolo_Obj {
 struct piccolo_ObjString {
     struct piccolo_Obj obj;
     char* string;
-    int len;
+    int len; // Number of bytes in memory(excluding null)
+    int utf8Len; // Number of UTF8 chars
     uint32_t hash;
 };
 

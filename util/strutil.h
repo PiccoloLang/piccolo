@@ -11,5 +11,6 @@ struct piccolo_strutil_LineInfo {
 };
 
 struct piccolo_strutil_LineInfo piccolo_strutil_getLine(const char* source, uint32_t charIdx);
+int piccolo_strutil_utf8Chars(char c);
 
 #endif
