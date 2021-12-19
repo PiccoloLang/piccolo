@@ -558,16 +558,32 @@ static struct piccolo_ExprNode* parseAdditive(PARSER_PARAMS) {
     return expr;
 }
 
-static struct piccolo_ExprNode* parseComparison(PARSER_PARAMS) {
+static struct piccolo_ExprNode* parseIn(PARSER_PARAMS) {
     SKIP_NEWLINES()
     struct piccolo_ExprNode* expr = parseAdditive(PARSER_ARGS);
+    while(parser->currToken.type == PICCOLO_TOKEN_IN) {
+        struct piccolo_Token op = parser->currToken;
+        advanceParser(engine, parser);
+        struct piccolo_ExprNode* rightHand = parseAdditive(PARSER_ARGS_REQ_VAL);
+        struct piccolo_BinaryNode* binary = ALLOCATE_NODE(parser, Binary, PICCOLO_EXPR_BINARY);
+        binary->a = expr;
+        binary->b = rightHand;
+        binary->op = op;
+        expr = (struct piccolo_ExprNode*)binary;
+    }
+    return expr;
+}
+
+static struct piccolo_ExprNode* parseComparison(PARSER_PARAMS) {
+    SKIP_NEWLINES()
+    struct piccolo_ExprNode* expr = parseIn(PARSER_ARGS);
     while(parser->currToken.type == PICCOLO_TOKEN_GREATER ||
           parser->currToken.type == PICCOLO_TOKEN_LESS ||
           parser->currToken.type == PICCOLO_TOKEN_GREATER_EQ ||
           parser->currToken.type == PICCOLO_TOKEN_LESS_EQ) {
         struct piccolo_Token op = parser->currToken;
         advanceParser(engine, parser);
-        struct piccolo_ExprNode* rightHand = parseComparison(PARSER_ARGS_REQ_VAL);
+        struct piccolo_ExprNode* rightHand = parseIn(PARSER_ARGS_REQ_VAL);
         struct piccolo_BinaryNode* binary = ALLOCATE_NODE(parser, Binary, PICCOLO_EXPR_BINARY);
         binary->a = expr;
         binary->op = op;

@@ -47,6 +47,7 @@ enum piccolo_OpCode {
 
     PICCOLO_OP_GET_LEN,
     PICCOLO_OP_APPEND,
+    PICCOLO_OP_IN,
 
     PICCOLO_OP_EXECUTE_PACKAGE
 };

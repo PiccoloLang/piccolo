@@ -638,6 +638,18 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_runtimeError(engine, "Cannot get length of %s.", piccolo_getTypeName(val));
                 break;
             }
+            case PICCOLO_OP_IN: {
+                piccolo_Value container = piccolo_enginePopStack(engine);
+                piccolo_Value key = piccolo_enginePopStack(engine);
+                if(!PICCOLO_IS_OBJ(container) || PICCOLO_AS_OBJ(container)->type != PICCOLO_OBJ_HASHMAP) {
+                    piccolo_runtimeError(engine, "Container must be a hashmap.");
+                    break;
+                }
+                struct piccolo_ObjHashmap* hashmap = (struct piccolo_ObjHashmap*)PICCOLO_AS_OBJ(container);
+                struct piccolo_HashmapValue entry = piccolo_getHashmap(engine, &hashmap->hashmap, key);
+                piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(entry.exists));
+                break;
+            }
             case PICCOLO_OP_EXECUTE_PACKAGE: {
                 piccolo_Value val = piccolo_enginePeekStack(engine, 1);
                 struct piccolo_Package* package = (struct piccolo_Package*)PICCOLO_AS_OBJ(val);

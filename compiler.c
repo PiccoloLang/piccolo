@@ -577,7 +577,8 @@ static void compileBinary(struct piccolo_BinaryNode* binary, COMPILE_PARAMS) {
        binary->op.type == PICCOLO_TOKEN_GREATER ||
        binary->op.type == PICCOLO_TOKEN_LESS ||
        binary->op.type == PICCOLO_TOKEN_GREATER_EQ ||
-       binary->op.type == PICCOLO_TOKEN_LESS_EQ) {
+       binary->op.type == PICCOLO_TOKEN_LESS_EQ ||
+       binary->op.type == PICCOLO_TOKEN_IN) {
         compileExpr(binary->a, COMPILE_ARGS);
         compileExpr(binary->b, COMPILE_ARGS);
 
@@ -619,6 +620,10 @@ static void compileBinary(struct piccolo_BinaryNode* binary, COMPILE_PARAMS) {
             case PICCOLO_TOKEN_LESS:
             case PICCOLO_TOKEN_GREATER_EQ: {
                 op = PICCOLO_OP_LESS;
+                break;
+            }
+            case PICCOLO_TOKEN_IN: {
+                op = PICCOLO_OP_IN;
                 break;
             }
             default: {
