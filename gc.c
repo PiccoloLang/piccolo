@@ -72,9 +72,9 @@ static void markPackage(struct piccolo_Package* package) {
 static void markRoots(struct piccolo_Engine* engine) {
     for(piccolo_Value* iter = engine->stack; iter != engine->stackTop; iter++)
         markValue(*iter);
-    for(int i = 0; i <= engine->currFrame; i++) {
-        if(engine->frames[i].closure != NULL)
-            markObj((struct piccolo_Obj*)engine->frames[i].closure);
+    for(int i = 0; i < engine->callFrames.count; i++) {
+        if(engine->callFrames.values[i].closure != NULL)
+            markObj((struct piccolo_Obj*)engine->callFrames.values[i].closure);
     }
     for(int i = 0; i < engine->locals.count; i++)
         markValue(engine->locals.values[i]);

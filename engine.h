@@ -18,6 +18,7 @@ struct piccolo_CallFrame {
 
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Package*, Package)
 PICCOLO_DYNARRAY_HEADER(const char*, String)
+PICCOLO_DYNARRAY_HEADER(struct piccolo_CallFrame, CallFrame)
 
 struct piccolo_Engine {
     struct piccolo_PackageArray packages;
@@ -25,8 +26,7 @@ struct piccolo_Engine {
     struct piccolo_ValueArray locals;
     piccolo_Value stack[256];
     piccolo_Value* stackTop;
-    struct piccolo_CallFrame frames[256];
-    int currFrame;
+    struct piccolo_CallFrameArray callFrames;
     bool hadError;
 
     size_t liveMemory;
