@@ -50,7 +50,7 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
         case PICCOLO_EXPR_HASHMAP_LITERAL: {
             struct piccolo_HashmapLiteralNode* hashmap = (struct piccolo_HashmapLiteralNode*)expr;
             printf("HASHMAP\n");
-            piccolo_printExpr(hashmap->first, offset + 1);
+            piccolo_printExpr((struct piccolo_ExprNode*) hashmap->first, offset + 1);
             break;
         }
         case PICCOLO_EXPR_SUBSCRIPT: {

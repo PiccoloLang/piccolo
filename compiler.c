@@ -128,7 +128,8 @@ static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, str
         }
     }
 
-    const char* source = piccolo_readFile(path);
+    // readFile returns a heap buffer - this shouldn't be marked const
+    char* source = piccolo_readFile(path);
     if(source == NULL) {
         for(int i = 0; i < engine->searchPaths.count; i++) {
             piccolo_applyRelativePathToFilePath(path, name, nameLen, engine->searchPaths.values[i]);
@@ -447,6 +448,12 @@ static void findGlobals(struct piccolo_Engine* engine, struct piccolo_Compiler* 
                 findGlobals(engine, compiler, callNode->function);
                 break;
             }
+            // TODO: These should be handled even though they may be error conditions since if someone is using piccolo from native unmanaged code they can create situations like this
+            case PICCOLO_EXPR_LITERAL: break;
+            case PICCOLO_EXPR_VAR: break;
+            case PICCOLO_EXPR_BLOCK: break;
+            case PICCOLO_EXPR_FN_LITERAL: break;
+            case PICCOLO_EXPR_IMPORT: break;
         }
         curr = curr->nextExpr;
     }
@@ -969,6 +976,7 @@ static void compileExpr(struct piccolo_ExprNode* expr, COMPILE_PARAMS) {
             compileHashmapLiteral((struct piccolo_HashmapLiteralNode*)expr, COMPILE_ARGS);
             break;
         }
+        case PICCOLO_EXPR_HASHMAP_ENTRY: break; // TODO: Handle this too
         case PICCOLO_EXPR_SUBSCRIPT: {
             compileSubscript((struct piccolo_SubscriptNode*)expr, COMPILE_ARGS);
             break;
