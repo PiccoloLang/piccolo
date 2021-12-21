@@ -3,9 +3,13 @@
 
 struct piccolo_strutil_LineInfo piccolo_strutil_getLine(const char* source, uint32_t charIdx) {
     struct piccolo_strutil_LineInfo lineInfo;
+    if(!source) return (struct piccolo_strutil_LineInfo) {0};
     lineInfo.lineStart = source;
     lineInfo.line = 0;
     for(uint32_t i = 0; i < charIdx; i++) {
+        if(source[i] == '\0') {
+            break;
+        }
         if(source[i] == '\n') {
             lineInfo.line++;
             lineInfo.lineStart = source + i + 1;
