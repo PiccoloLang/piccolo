@@ -124,6 +124,7 @@ static struct piccolo_ExprNode* parseBlock(PARSER_PARAMS) {
     }
 
     struct piccolo_ExprNode* firstExpr = parseExpr(PARSER_ARGS);
+    if(firstExpr == NULL) return NULL;
     while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
         advanceParser(engine, parser);
     

@@ -14,13 +14,13 @@ char* piccolo_readFile(const char* path) {
     size_t fileSize = ftell(file);
     rewind(file);
 
-    char* buffer = (char*)malloc(fileSize + 1);
+    /* need to calloc to guarantee the appending of the null term */
+    char* buffer = (char*)calloc(fileSize + 1, sizeof(char));
     if(buffer == NULL)
         return NULL;
     size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
     if(bytesRead < fileSize)
         return NULL;
-    buffer[bytesRead] = '\0';
 
     fclose(file);
     return buffer;
