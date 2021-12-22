@@ -5,8 +5,9 @@
 #include <stdint.h>
 
 struct piccolo_strutil_LineInfo {
-    char* lineStart;
-    char* lineEnd;
+    // These are assigned with const values in several places and so should be marked const
+    const char* lineStart;
+    const char* lineEnd;
     int line;
 };
 

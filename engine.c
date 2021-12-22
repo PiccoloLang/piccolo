@@ -185,6 +185,10 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
             return PICCOLO_NIL_VAL();
         }
     }
+
+    // This could maybe be marked unreachable since the default case returns but there is no way to handle compiler intrinsic atm.
+    // TODO: Possibly a future compiler_features.h or the like could resolve this kind of thing
+    return PICCOLO_NIL_VAL();
 }
 
 static bool shouldCloseUpval(struct piccolo_Engine* engine, struct piccolo_ObjUpval* upval) {

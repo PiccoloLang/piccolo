@@ -40,7 +40,7 @@ static void markObj(struct piccolo_Obj* obj) {
         }
         case PICCOLO_OBJ_CLOSURE: {
             struct piccolo_ObjClosure* closure = (struct piccolo_ObjClosure*)obj;
-            markObj(closure->prototype);
+            markObj((struct piccolo_Obj*) closure->prototype);
             for(int i = 0; i < closure->upvalCnt; i++) {
                 markObj((struct piccolo_Obj*) closure->upvals[i]);
             }
