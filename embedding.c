@@ -4,6 +4,11 @@
 #include <string.h>
 
 void piccolo_addSearchPath(struct piccolo_Engine* engine, const char* path) {
+    if(path[strlen(path) - 1] != '/') {
+        // TODO: This should be fixed in the CLI once the package path changes are merged
+        piccolo_enginePrintError(engine, "Incorrectly formatted package path '%s'\n", path);
+        return;
+    }
     piccolo_writeStringArray(engine, &engine->searchPaths, path);
 }
 
