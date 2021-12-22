@@ -322,6 +322,9 @@ static struct piccolo_ExprNode* parseImport(PARSER_PARAMS) {
     if(parser->currToken.type == PICCOLO_TOKEN_IMPORT) {
         advanceParser(engine, parser);
         if(parser->currToken.type == PICCOLO_TOKEN_STRING) {
+            if(parser->currToken.length > PICCOLO_MAX_PACKAGE) {
+                parsingError(engine, parser, "Package import of length %d exceeded PICCOLO_MAX_PACKAGE (%d).", parser->currToken.length, PICCOLO_MAX_PACKAGE);
+            }
             struct piccolo_Token packageName = parser->currToken;
             struct piccolo_ImportNode* import = ALLOCATE_NODE(parser, Import, PICCOLO_EXPR_IMPORT);
             import->packageName = packageName;
