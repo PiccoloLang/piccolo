@@ -9,6 +9,7 @@
 #include "util/strutil.h"
 #include "object.h"
 #include "gc.h"
+#include "limits.h"
 
 // #define PICCOLO_ENABLE_ENGINE_DEBUG
 
@@ -411,8 +412,15 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_runtimeError(engine, "Cannot create range between %s and %s.", piccolo_getTypeName(a), piccolo_getTypeName(b));
                     break;
                 }
-                int aNum = PICCOLO_AS_NUM(a);
-                int bNum = PICCOLO_AS_NUM(b);
+                double aDouble = PICCOLO_AS_NUM(a);
+                double bDouble = PICCOLO_AS_NUM(b);
+                if(aDouble > INT_MAX || bDouble < INT_MIN ||
+                   bDouble > INT_MAX || bDouble < INT_MIN) {
+                    piccolo_runtimeError(engine, "Range limits too large");
+                    break;
+                }
+                int aNum = (int)aDouble;
+                int bNum = (int)bDouble;
                 struct piccolo_ObjArray* range = piccolo_newArray(engine, bNum - aNum);
                 for(int i = 0; i < bNum - aNum; i++)
                     range->array.values[i] = PICCOLO_NUM_VAL(aNum + i);
