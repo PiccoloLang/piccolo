@@ -121,7 +121,7 @@ static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, str
         }
     }
 
-    char path[4096 + 1 /* Terminator */] = { 0 };
+    char path[PICCOLO_MAX_PACKAGE + 1 /* Terminator */] = { 0 };
     piccolo_applyRelativePathToFilePath(path, name, nameLen, sourceFilepath);
     for(int i = 0; i < engine->packages.count; i++) {
         if(strcmp(path, engine->packages.values[i]->packageName) == 0) {

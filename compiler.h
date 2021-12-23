@@ -7,6 +7,9 @@
 #include "scanner.h"
 #include "util/dynarray.h"
 
+// Maximum length of a package name
+#define PICCOLO_MAX_PACKAGE 4096
+
 struct piccolo_Engine;
 struct piccolo_Package;
 

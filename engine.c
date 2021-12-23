@@ -196,7 +196,7 @@ static bool shouldCloseUpval(struct piccolo_Engine* engine, struct piccolo_ObjUp
 }
 
 static void pushFrame(struct piccolo_Engine* engine) {
-    struct piccolo_CallFrame frame;
+    struct piccolo_CallFrame frame = { 0 };
     frame.closure = NULL;
     piccolo_writeCallFrameArray(engine, &engine->callFrames, frame);
 }
@@ -210,6 +210,15 @@ static bool run(struct piccolo_Engine* engine) {
 #define READ_PARAM() ((READ_BYTE() << 8) + READ_BYTE())
     engine->hadError = false;
     while(true) {
+        if(engine->callFrames.capacity >= PICCOLO_MAX_FRAMES) {
+            // TODO: Nicer output when encountering invalid call frame state
+            piccolo_enginePrintError(engine, "Call frame depth exceeded PICCOLO_MAX_FRAMES (%i).\n", PICCOLO_MAX_FRAMES);
+            break;
+        }
+        if(!engine->callFrames.values) {
+            piccolo_enginePrintError(engine, "Invalid callframe state encountered.\n");
+            break;
+        }
         CURR_FRAME.prevIp = CURR_FRAME.ip;
         enum piccolo_OpCode opcode = READ_BYTE();
         switch(opcode) {
@@ -699,6 +708,8 @@ static bool run(struct piccolo_Engine* engine) {
         }
     }
 #undef READ_BYTE
+
+    return false;
 }
 
 bool piccolo_executePackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
