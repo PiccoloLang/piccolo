@@ -34,6 +34,7 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     piccolo_initPackageArray(&engine->packages);
     piccolo_initCallFrameArray(&engine->callFrames);
     piccolo_initStringArray(&engine->searchPaths);
+    piccolo_initValueArray(&engine->locals);
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     engine->track = NULL;
 #endif
@@ -212,7 +213,7 @@ static bool run(struct piccolo_Engine* engine) {
     while(true) {
         if(engine->callFrames.capacity >= PICCOLO_MAX_FRAMES) {
             // TODO: Nicer output when encountering invalid call frame state
-            piccolo_enginePrintError(engine, "Call frame depth exceeded PICCOLO_MAX_FRAMES (%i).\n", PICCOLO_MAX_FRAMES);
+            piccolo_enginePrintError(engine, "Call frame depth exceeded limit (%i).\n", PICCOLO_MAX_FRAMES);
             break;
         }
         if(!engine->callFrames.values) {

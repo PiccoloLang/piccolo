@@ -562,6 +562,8 @@ static void compileIndex(struct piccolo_IndexNode* index, COMPILE_PARAMS) {
 
 static void compileUnary(struct piccolo_UnaryNode* unary, COMPILE_PARAMS) {
     compileExpr(unary->value, COMPILE_ARGS);
+    if(!unary->value->reqEval)
+        return;
     switch(unary->op.type) {
         case PICCOLO_TOKEN_MINUS: {
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_NEGATE, unary->op.charIdx);
@@ -1082,11 +1084,11 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
         currExpr = currExpr->nextExpr;
     }
 
-//    piccolo_printExpr(ast, 0);
+    piccolo_printExpr(ast, 0);
     piccolo_freeParser(engine, &parser);
 
     piccolo_writeBytecode(engine, &package->bytecode, PICCOLO_OP_RETURN, 0);
-//    piccolo_disassembleBytecode(&package->bytecode);
+    piccolo_disassembleBytecode(&package->bytecode);
 
     package->compiled = true;
 

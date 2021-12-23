@@ -89,6 +89,7 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
 
 void piccolo_disassembleBytecode(struct piccolo_Bytecode* bytecode) {
     int currOffset = 0;
+
     while(currOffset < bytecode->code.count)
         currOffset = piccolo_disassembleInstruction(bytecode, currOffset);
 }
