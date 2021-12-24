@@ -402,10 +402,6 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_runtimeError(engine, "Cannot negate %s.", piccolo_getTypeName(val));
                     break;
                 }
-                if(!PICCOLO_AS_NUM(val)) {
-                    piccolo_runtimeError(engine, "Cannot negate nil.");
-                    break;
-                }
                 piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(!PICCOLO_AS_BOOL(val)));
                 break;
             }
