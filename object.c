@@ -13,10 +13,10 @@ uint32_t piccolo_hashHashmapKey(piccolo_Value key) {
     if(PICCOLO_IS_NUM(key)) {
         double val = PICCOLO_AS_NUM(key);
         int32_t i;
-        val = frexp(val, &i) * -(double)INT32_MIN;
+        val = frexp(val, &i) * -(double)INT_MIN;
         int32_t ni = (int32_t)val;
         uint32_t u = (uint32_t)i + (uint32_t)ni;
-        return u <= INT32_MAX ? u : ~u;
+        return u <= INT_MAX ? u : ~u;
     }
     if(PICCOLO_IS_BOOL(key)) {
         return 1000000007 * PICCOLO_AS_BOOL(key);

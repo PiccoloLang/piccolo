@@ -80,9 +80,11 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
                         }
                     } else {
                         piccolo_runtimeError(engine, "Cannot index string with %s.", piccolo_getTypeName(idx));
+                        break;
                     }
                 } else {
                     piccolo_runtimeError(engine, "Cannot index string with %s.", piccolo_getTypeName(idx));
+                    break;
                 }
                 return PICCOLO_NIL_VAL();
             }
@@ -113,14 +115,17 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
                     if(str->len == 6 && strcmp(str->string, "length") == 0) {
                         if(set) {
                             piccolo_runtimeError(engine, "Cannot set array length.");
+                            break;
                         } else {
                             return PICCOLO_NUM_VAL(array->array.count);
                         }
                     } else {
                         piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
+                        break;
                     }
                 } else {
                     piccolo_runtimeError(engine, "Cannot index array with %s.", piccolo_getTypeName(idx));
+                    break;
                 }
                 return PICCOLO_NIL_VAL();
             }
@@ -324,7 +329,17 @@ static bool run(struct piccolo_Engine* engine) {
                         repetitions = PICCOLO_AS_NUM(b);
                         array = (struct piccolo_ObjArray*)PICCOLO_AS_OBJ(a);
                     }
+
+                    if ((array->array.count && repetitions) && (INT_MAX / array->array.count < repetitions || array->array.count < INT_MIN / repetitions)) {
+                        piccolo_runtimeError(engine, "Array repetition exceeded integer limits.");
+                        break;
+                    } 
+
                     struct piccolo_ObjArray* result = piccolo_newArray(engine, array->array.count * repetitions);
+                    if(!result->array.values) {
+                        piccolo_runtimeError(engine, "Failed to allocate for new array.");
+                        break;
+                    }
                     for(int i = 0; i < repetitions; i++) {
                         for(int j = 0; j < array->array.count; j++) {
                             result->array.values[i * array->array.count + j] = array->array.values[j];
@@ -356,7 +371,7 @@ static bool run(struct piccolo_Engine* engine) {
                 double aNum = PICCOLO_AS_NUM(a);
                 double bNum = PICCOLO_AS_NUM(b);
                 // TODO: Very jank but will do for now
-                if(aNum < INT32_MAX && aNum > INT32_MIN && bNum < INT32_MAX && bNum > INT32_MIN && aNum == (int)aNum && bNum == (int)bNum) {
+                if(aNum < INT_MAX && aNum > INT_MIN && bNum < INT_MAX && bNum > INT_MIN && aNum == (int)aNum && bNum == (int)bNum) {
                     if(aNum == 0) {
                         piccolo_runtimeError(engine, "Divide by zero.");
                         break;
@@ -450,6 +465,7 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value container = piccolo_enginePopStack(engine);
                 if(!PICCOLO_IS_OBJ(container)) {
                     piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
+                    break;
                 } else {
                     struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
                     piccolo_Value value = indexing(engine, containerObj, idx, false, PICCOLO_NIL_VAL());

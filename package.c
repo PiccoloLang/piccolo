@@ -42,6 +42,7 @@ struct piccolo_Package* piccolo_createPackage(struct piccolo_Engine* engine) {
 
 struct piccolo_Package* piccolo_loadPackage(struct piccolo_Engine* engine, const char* filepath) {
     struct piccolo_Package* package = piccolo_createPackage(engine);
+    package->compilationError = false;
 
     package->packageName = filepath;
 
