@@ -294,7 +294,7 @@ static bool run(struct piccolo_Engine* engine) {
                         repetitions = PICCOLO_AS_NUM(a);
                         string = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(b);
                     } else {
-                        if(b.as.number == INFINITY) {
+                        if(PICCOLO_AS_NUM(b) == INFINITY) {
                             piccolo_runtimeError(engine, "Cannot multiply string by INFINITY.");
                             break;
                         }
@@ -389,7 +389,7 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_runtimeError(engine, "Cannot negate %s.", piccolo_getTypeName(val));
                     break;
                 }
-                if(!val.as.number) {
+                if(!PICCOLO_AS_NUM(val)) {
                     piccolo_runtimeError(engine, "Cannot negate nil.");
                     break;
                 }
@@ -402,7 +402,7 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_runtimeError(engine, "Cannot negate %s.", piccolo_getTypeName(val));
                     break;
                 }
-                if(!val.as.number) {
+                if(!PICCOLO_AS_NUM(val)) {
                     piccolo_runtimeError(engine, "Cannot negate nil.");
                     break;
                 }
