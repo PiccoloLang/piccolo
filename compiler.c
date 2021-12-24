@@ -841,8 +841,7 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
             container idx
             - for loop body -
             container idx
-            container idx 1
-            container (idx + 1)
+            container idxNext
         
 
         Req Val:
@@ -856,8 +855,7 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
             container idx result bodyVal
             container idx (result + bodyVal)
             container (result + bodyVal) idx
-            container (result + bodyVal) idx 1
-            container (result + bodyVal) (idx + 1)
+            container (result + bodyVal) idxNext
             container (idx + 1) (result + bodyVal)
 
     */
@@ -877,7 +875,7 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
     }
 
     compileExpr(forNode->container, COMPILE_ARGS); // container
-    piccolo_writeConst(engine, bytecode, PICCOLO_NUM_VAL(0), forNode->charIdx); // idx
+    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_ITER_FIRST, forNode->charIdx); // idx
     if(forNode->expr.reqEval)
         piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_CREATE_ARRAY, 0, forNode->charIdx); // result
 
@@ -885,15 +883,14 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
     int loopStartAddr = bytecode->code.count;
     
     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, peekDist, forNode->charIdx);
-    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_LEN, forNode->containerCharIdx);
     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, peekDist, forNode->charIdx);
-    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GREATER, forNode->charIdx);
+    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_ITER_CONT, forNode->charIdx);
     int breakLoopAddr = bytecode->code.count;
     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_JUMP_FALSE, 0, forNode->charIdx);
 
     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, peekDist, forNode->charIdx); // container
     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_PEEK_STACK, peekDist, forNode->charIdx); // idx
-    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_IDX, forNode->charIdx); // element
+    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_ITER_GET, forNode->charIdx); // element
     piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_SET_LOCAL, slot, forNode->charIdx);
     piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, forNode->charIdx);
 
@@ -903,8 +900,9 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_APPEND, forNode->charIdx);
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SWAP_STACK, forNode->charIdx);
     }
-    piccolo_writeConst(engine, bytecode, PICCOLO_NUM_VAL(1), 0);
-    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_ADD, 0);
+
+    piccolo_writeParameteredBytecode(engine, bytecode, PICCOLO_OP_ITER_NEXT, peekDist, forNode->charIdx);
+
     if(forNode->expr.reqEval) {
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_SWAP_STACK, forNode->charIdx);
     }
@@ -1088,7 +1086,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     piccolo_freeParser(engine, &parser);
 
     piccolo_writeBytecode(engine, &package->bytecode, PICCOLO_OP_RETURN, 0);
-//    piccolo_disassembleBytecode(&package->bytecode);
+    piccolo_disassembleBytecode(&package->bytecode);
 
     package->compiled = true;
 

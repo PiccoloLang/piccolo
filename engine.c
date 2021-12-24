@@ -11,7 +11,7 @@
 #include "gc.h"
 #include "limits.h"
 
-// #define PICCOLO_ENABLE_ENGINE_DEBUG
+//#define PICCOLO_ENABLE_ENGINE_DEBUG
 
 #ifdef PICCOLO_ENABLE_ENGINE_DEBUG
 #include <stdio.h>
@@ -672,6 +672,81 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(entry.exists));
                 break;
             }
+            case PICCOLO_OP_ITER_FIRST: {
+                piccolo_Value container = piccolo_enginePeekStack(engine, 1);
+                if(!PICCOLO_IS_OBJ(container)) {
+                    piccolo_runtimeError(engine, "Cannot iterate over %s.", piccolo_getTypeName(container));
+                    break;
+                }
+                if(PICCOLO_AS_OBJ(container)->type != PICCOLO_OBJ_ARRAY &&
+                   PICCOLO_AS_OBJ(container)->type != PICCOLO_OBJ_STRING &&
+                   PICCOLO_AS_OBJ(container)->type != PICCOLO_OBJ_HASHMAP) {
+                    piccolo_runtimeError(engine, "Cannot iterate over %s.", piccolo_getTypeName(container));
+                    break;
+                }
+                struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
+                if(containerObj->type == PICCOLO_OBJ_ARRAY || containerObj->type == PICCOLO_OBJ_STRING)
+                    piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(0));
+                if(containerObj->type == PICCOLO_OBJ_HASHMAP) {
+                    int idx = 0;
+                    struct piccolo_ObjHashmap* hashmap = (struct piccolo_ObjHashmap*)containerObj;
+                    while(idx < hashmap->hashmap.capacity && !hashmap->hashmap.entries[idx].val.exists)
+                        idx++;
+                    piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(idx));
+                }
+                break;
+            }
+            case PICCOLO_OP_ITER_CONT: {
+                piccolo_Value iterator = piccolo_enginePopStack(engine);
+                piccolo_Value container = piccolo_enginePopStack(engine);
+                struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
+                int idx = PICCOLO_AS_NUM(iterator);
+                bool last;
+                switch(containerObj->type) {
+                    case PICCOLO_OBJ_ARRAY: {
+                        last = idx >= ((struct piccolo_ObjArray*)containerObj)->array.count;
+                        break;
+                    }
+                    case PICCOLO_OBJ_STRING: {
+                        last = idx >= ((struct piccolo_ObjString*)containerObj)->utf8Len;
+                        break;
+                    }
+                    case PICCOLO_OBJ_HASHMAP: {
+                        last = idx >= ((struct piccolo_ObjHashmap*)containerObj)->hashmap.capacity;
+                        break;
+                    }
+                }
+                piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(!last));
+                break;
+            }
+            case PICCOLO_OP_ITER_NEXT: {
+                piccolo_Value container = piccolo_enginePeekStack(engine, READ_PARAM());
+                piccolo_Value iterator = piccolo_enginePopStack(engine);
+                struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
+                int idx = PICCOLO_AS_NUM(iterator);
+                if(containerObj->type == PICCOLO_OBJ_ARRAY)
+                    idx++;
+                if(containerObj->type == PICCOLO_OBJ_STRING)
+                    idx++;
+                if(containerObj->type == PICCOLO_OBJ_HASHMAP) {
+                    idx++;
+                    while(idx < ((struct piccolo_ObjHashmap*)containerObj)->hashmap.capacity && !((struct piccolo_ObjHashmap*)containerObj)->hashmap.entries[idx].val.exists)
+                        idx++;
+                }
+                piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(idx));
+                break;
+            }
+            case PICCOLO_OP_ITER_GET: {
+                int idx = PICCOLO_AS_NUM(piccolo_enginePopStack(engine));
+                struct piccolo_Obj* container = PICCOLO_AS_OBJ(piccolo_enginePopStack(engine));
+                piccolo_Value val;
+                if(container->type == PICCOLO_OBJ_ARRAY || container->type == PICCOLO_OBJ_STRING)
+                    val = indexing(engine, container, PICCOLO_NUM_VAL(idx), false, PICCOLO_NIL_VAL());
+                if(container->type == PICCOLO_OBJ_HASHMAP)
+                    val = ((struct piccolo_ObjHashmap*)container)->hashmap.entries[idx].key;
+                piccolo_enginePushStack(engine, val);
+                break;
+            }
             case PICCOLO_OP_EXECUTE_PACKAGE: {
                 piccolo_Value val = piccolo_enginePeekStack(engine, 1);
                 struct piccolo_Package* package = (struct piccolo_Package*)PICCOLO_AS_OBJ(val);
@@ -692,7 +767,7 @@ static bool run(struct piccolo_Engine* engine) {
             }
         }
 #ifdef PICCOLO_ENABLE_ENGINE_DEBUG
-        piccolo_disassembleInstruction(engine->frames[engine->currFrame].bytecode, engine->frames[engine->currFrame].prevIp);
+        piccolo_disassembleInstruction(CURR_FRAME.bytecode, CURR_FRAME.prevIp);
         printf("DATA STACK:\n");
         for(piccolo_Value* stackPtr = engine->stack; stackPtr != engine->stackTop; stackPtr++) {
             printf("[");
@@ -701,9 +776,9 @@ static bool run(struct piccolo_Engine* engine) {
         }
         printf("\n");
         printf("LOCAL STACK:\n");
-        for(int i = 0; i < engine->localCnt; i++) {
+        for(int i = 0; i < engine->locals.count; i++) {
             printf("[");
-            piccolo_printValue(engine->locals[i]);
+            piccolo_printValue(engine->locals.values[i]);
             printf("] ");
         }
         printf("\n");

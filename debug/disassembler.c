@@ -79,6 +79,9 @@ int piccolo_disassembleInstruction(struct piccolo_Bytecode* bytecode, int offset
         SIMPLE_INSTRUCTION(OP_GET_LEN)
         SIMPLE_INSTRUCTION(OP_APPEND)
         SIMPLE_INSTRUCTION(OP_IN)
+        SIMPLE_INSTRUCTION(OP_ITER_CONT)
+        PARAM_INSTRUCTION(OP_ITER_NEXT)
+        SIMPLE_INSTRUCTION(OP_ITER_GET)
 
         SIMPLE_INSTRUCTION(OP_EXECUTE_PACKAGE)
     }
