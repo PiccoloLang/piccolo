@@ -53,6 +53,7 @@ void piccolo_freeEngine(struct piccolo_Engine* engine) {
         curr = curr->next;
         piccolo_freeObj(engine, toFree);
     }
+
     piccolo_freeValueArray(engine, &engine->locals);
     piccolo_freeCallFrameArray(engine, &engine->callFrames);
     piccolo_freeStringArray(engine, &engine->searchPaths);
@@ -293,8 +294,16 @@ static bool run(struct piccolo_Engine* engine) {
                         repetitions = PICCOLO_AS_NUM(a);
                         string = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(b);
                     } else {
+                        if(PICCOLO_AS_NUM(b) == INFINITY) {
+                            piccolo_runtimeError(engine, "Cannot multiply string by INFINITY.");
+                            break;
+                        }
                         repetitions = PICCOLO_AS_NUM(b);
                         string = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(a);
+                    }
+                    if(repetitions < 0) {
+                        piccolo_runtimeError(engine, "Can't multiply string by negative number.");
+                        break;
                     }
                     char* result = PICCOLO_REALLOCATE("string multiplication", engine, NULL, 0, repetitions * string->len + 1);
                     for(int i = 0; i < repetitions; i++)
@@ -346,7 +355,12 @@ static bool run(struct piccolo_Engine* engine) {
                 }
                 double aNum = PICCOLO_AS_NUM(a);
                 double bNum = PICCOLO_AS_NUM(b);
-                if(aNum == (int)aNum && bNum == (int)bNum) {
+                // TODO: Very jank but will do for now
+                if(aNum < INT32_MAX && aNum > INT32_MIN && bNum < INT32_MAX && bNum > INT32_MIN && aNum == (int)aNum && bNum == (int)bNum) {
+                    if(aNum == 0) {
+                        piccolo_runtimeError(engine, "Divide by zero.");
+                        break;
+                    }
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL((int)bNum % (int)aNum));
                     break;
                 }
@@ -375,6 +389,10 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_runtimeError(engine, "Cannot negate %s.", piccolo_getTypeName(val));
                     break;
                 }
+                if(!PICCOLO_AS_NUM(val)) {
+                    piccolo_runtimeError(engine, "Cannot negate nil.");
+                    break;
+                }
                 piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(-PICCOLO_AS_NUM(val)));
                 break;
             }
@@ -382,6 +400,10 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value val = piccolo_enginePopStack(engine);
                 if(!PICCOLO_IS_BOOL(val)) {
                     piccolo_runtimeError(engine, "Cannot negate %s.", piccolo_getTypeName(val));
+                    break;
+                }
+                if(!PICCOLO_AS_NUM(val)) {
+                    piccolo_runtimeError(engine, "Cannot negate nil.");
                     break;
                 }
                 piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(!PICCOLO_AS_BOOL(val)));
@@ -445,6 +467,7 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value container = piccolo_enginePopStack(engine);
                 if(!PICCOLO_IS_OBJ(container)) {
                     piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(container));
+                    break;
                 } else {
                     struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
                     indexing(engine, containerObj, idx, true, val);
@@ -549,9 +572,9 @@ static bool run(struct piccolo_Engine* engine) {
                 CURR_FRAME.localStart = engine->locals.count;
                 for(int i = 0; i < argCount; i++)
                     piccolo_writeValueArray(engine, &engine->locals, PICCOLO_NIL_VAL());
-                for(int i = argCount - 1; i >= 0; i--) {
+                for(int i = argCount; i > 0; i--) {
                     piccolo_Value arg = piccolo_enginePopStack(engine);
-                    engine->locals.values[CURR_FRAME.localStart + i] = arg;
+                    engine->locals.values[CURR_FRAME.localStart + (i - 1)] = arg;
                 }
                 piccolo_Value func = piccolo_enginePopStack(engine);
 
@@ -584,6 +607,10 @@ static bool run(struct piccolo_Engine* engine) {
                 if(type == PICCOLO_OBJ_NATIVE_FN) {
                     struct piccolo_ObjNativeFn* native = (struct piccolo_ObjNativeFn*)PICCOLO_AS_OBJ(func);
                     popFrame(engine);
+                    if(argCount == 0) {
+                        piccolo_enginePushStack(engine, native->native(engine, 0, NULL));
+                        break;
+                    }
                     piccolo_enginePushStack(engine, native->native(engine, argCount, &engine->locals.values[engine->callFrames.values[engine->callFrames.count].localStart]));
                     engine->locals.count -= argCount;
                     break;
