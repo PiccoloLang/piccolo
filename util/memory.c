@@ -2,7 +2,7 @@
 #include "memory.h"
 #include "../engine.h"
 #include <stdlib.h>
-
+#include <string.h>
 #include <stdio.h>
 
 void* piccolo_reallocate(struct piccolo_Engine* engine, void* data, size_t oldSize, size_t newSize) {
@@ -11,7 +11,9 @@ void* piccolo_reallocate(struct piccolo_Engine* engine, void* data, size_t oldSi
         free(data);
         return NULL;
     }
-    return realloc(data, newSize);
+    void* const retval = realloc(data, newSize);
+    memset(retval + oldSize, 0, newSize - oldSize);
+    return retval;
 }
 
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
