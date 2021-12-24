@@ -754,6 +754,26 @@ static bool run(struct piccolo_Engine* engine) {
                         last = idx >= ((struct piccolo_ObjHashmap*)containerObj)->hashmap.capacity;
                         break;
                     }
+                    case PICCOLO_OBJ_FUNC: {
+                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
+                        break;
+                    }
+                    case PICCOLO_OBJ_UPVAL: {
+                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
+                        break;
+                    }
+                    case PICCOLO_OBJ_CLOSURE: {
+                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
+                        break;
+                    }
+                    case PICCOLO_OBJ_NATIVE_FN: {
+                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
+                        break;
+                    }
+                    case PICCOLO_OBJ_PACKAGE: {
+                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
+                        break;
+                    }
                 }
                 piccolo_enginePushStack(engine, PICCOLO_BOOL_VAL(!last));
                 break;
