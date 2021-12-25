@@ -317,25 +317,35 @@ static bool run(struct piccolo_Engine* engine) {
                     struct piccolo_ObjString* resultStr = piccolo_takeString(engine, result);
                     piccolo_enginePushStack(engine, PICCOLO_OBJ_VAL(resultStr));
                     break;
+                    
                 }
                 if((PICCOLO_IS_NUM(a) && PICCOLO_IS_OBJ(b) && PICCOLO_AS_OBJ(b)->type == PICCOLO_OBJ_ARRAY) ||
                    (PICCOLO_IS_NUM(b) && PICCOLO_IS_OBJ(a) && PICCOLO_AS_OBJ(a)->type == PICCOLO_OBJ_ARRAY)) {
                     int repetitions;
                     struct piccolo_ObjArray* array;
                     if(PICCOLO_IS_NUM(a)) {
+                        if(PICCOLO_AS_NUM(a) > INT_MAX || PICCOLO_AS_NUM(a) < INT_MIN) {
+                            piccolo_runtimeError(engine, "Array repetition exceeded integer limits.");
+                            break;
+                        }
                         repetitions = PICCOLO_AS_NUM(a);
                         array = (struct piccolo_ObjArray*)PICCOLO_AS_OBJ(b);
                     } else {
+                        if(PICCOLO_AS_NUM(b) > INT_MAX || PICCOLO_AS_NUM(b) < INT_MIN) {
+                            piccolo_runtimeError(engine, "Array repetition exceeded integer limits.");
+                            break;
+                        }
                         repetitions = PICCOLO_AS_NUM(b);
                         array = (struct piccolo_ObjArray*)PICCOLO_AS_OBJ(a);
                     }
 
-                    if ((array->array.count && repetitions) && (INT_MAX / array->array.count < repetitions || array->array.count < INT_MIN / repetitions)) {
+                    double newCount = (double) array->array.count * (double) repetitions;
+                    if(newCount > INT_MAX || newCount < INT_MIN) {
                         piccolo_runtimeError(engine, "Array repetition exceeded integer limits.");
                         break;
-                    } 
+                    }
 
-                    struct piccolo_ObjArray* result = piccolo_newArray(engine, array->array.count * repetitions);
+                    struct piccolo_ObjArray* result = piccolo_newArray(engine, (int) newCount);
                     if(!result->array.values) {
                         piccolo_runtimeError(engine, "Failed to allocate for new array.");
                         break;
@@ -447,7 +457,7 @@ static bool run(struct piccolo_Engine* engine) {
                 }
                 double aDouble = PICCOLO_AS_NUM(a);
                 double bDouble = PICCOLO_AS_NUM(b);
-                if(aDouble > INT_MAX || bDouble < INT_MIN ||
+                if(aDouble > INT_MAX || aDouble < INT_MIN ||
                    bDouble > INT_MAX || bDouble < INT_MIN) {
                     piccolo_runtimeError(engine, "Range limits too large");
                     break;

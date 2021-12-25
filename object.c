@@ -139,8 +139,13 @@ struct piccolo_ObjString* piccolo_copyString(struct piccolo_Engine* engine, cons
 struct piccolo_ObjArray* piccolo_newArray(struct piccolo_Engine* engine, int len) {
     struct piccolo_ObjArray* array = ALLOCATE_OBJ(engine, struct piccolo_ObjArray, PICCOLO_OBJ_ARRAY);
     piccolo_initValueArray(&array->array);
-    for(int i = 0; i < len; i++)
+    for(int i = 0; i < len; i++) {
         piccolo_writeValueArray(engine, &array->array, PICCOLO_NIL_VAL());
+        if(!array->array.values) {
+            piccolo_runtimeError(engine, "Failed to allocate for new array.");
+            return NULL;
+        }
+    }
     return array;
 }
 
