@@ -731,7 +731,7 @@ static bool run(struct piccolo_Engine* engine) {
                         break;
                     }
                     case PICCOLO_OBJ_STRING: {
-                        last = idx >= ((struct piccolo_ObjString*)containerObj)->utf8Len;
+                        last = idx >= ((struct piccolo_ObjString*)containerObj)->len;
                         break;
                     }
                     case PICCOLO_OBJ_HASHMAP: {
@@ -749,8 +749,10 @@ static bool run(struct piccolo_Engine* engine) {
                 int idx = PICCOLO_AS_NUM(iterator);
                 if(containerObj->type == PICCOLO_OBJ_ARRAY)
                     idx++;
-                if(containerObj->type == PICCOLO_OBJ_STRING)
-                    idx++;
+                if(containerObj->type == PICCOLO_OBJ_STRING) {
+                    struct piccolo_ObjString* str = (struct piccolo_ObjString*)containerObj;
+                    idx += piccolo_strutil_utf8Chars(str->string[idx]);
+                }
                 if(containerObj->type == PICCOLO_OBJ_HASHMAP) {
                     idx++;
                     while(idx < ((struct piccolo_ObjHashmap*)containerObj)->hashmap.capacity && !((struct piccolo_ObjHashmap*)containerObj)->hashmap.entries[idx].val.exists)
@@ -763,8 +765,17 @@ static bool run(struct piccolo_Engine* engine) {
                 int idx = PICCOLO_AS_NUM(piccolo_enginePopStack(engine));
                 struct piccolo_Obj* container = PICCOLO_AS_OBJ(piccolo_enginePopStack(engine));
                 piccolo_Value val;
-                if(container->type == PICCOLO_OBJ_ARRAY || container->type == PICCOLO_OBJ_STRING)
+                if(container->type == PICCOLO_OBJ_ARRAY)
                     val = indexing(engine, container, PICCOLO_NUM_VAL(idx), false, PICCOLO_NIL_VAL());
+                if(container->type == PICCOLO_OBJ_STRING) {
+                    struct piccolo_ObjString* string = (struct piccolo_ObjString*)container;
+                    char str[5];
+                    int charCnt = piccolo_strutil_utf8Chars(string->string[idx]);
+                    memcpy(str, &string->string[idx], charCnt);
+                    str[charCnt] = '\0';
+                    struct piccolo_ObjString* result = piccolo_copyString(engine, str, charCnt);
+                    val = PICCOLO_OBJ_VAL(result);
+                }
                 if(container->type == PICCOLO_OBJ_HASHMAP)
                     val = ((struct piccolo_ObjHashmap*)container)->hashmap.entries[idx].key;
                 piccolo_enginePushStack(engine, val);
