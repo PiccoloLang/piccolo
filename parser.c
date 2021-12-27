@@ -281,6 +281,8 @@ static struct piccolo_ExprNode* parseArrayLiteral(PARSER_PARAMS) {
     SKIP_NEWLINES()
     if(parser->currToken.type == PICCOLO_TOKEN_LEFT_SQR_PAREN) {
         advanceParser(engine, parser);
+        while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+            advanceParser(engine, parser);
         struct piccolo_ExprNode* first = NULL;
         struct piccolo_ExprNode* curr = NULL;
         while(parser->currToken.type != PICCOLO_TOKEN_RIGHT_SQR_PAREN) {

@@ -121,6 +121,20 @@ static piccolo_Value floorNative(struct piccolo_Engine* engine, int argc, piccol
     return PICCOLO_NIL_VAL();
 }
 
+static piccolo_Value sqrtNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) { 
+    if(argc != 1) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+    } else {
+        if(!PICCOLO_IS_NUM(argv[0])) {
+            piccolo_runtimeError(engine, "Value must be a number.");
+        } else {
+            double val = PICCOLO_AS_NUM(argv[0]);
+            return PICCOLO_NUM_VAL(sqrt(val));
+        }
+    }
+    return PICCOLO_NIL_VAL();
+}
+
 void piccolo_addMathLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* math = piccolo_createPackage(engine);
     math->packageName = "math";
@@ -132,4 +146,5 @@ void piccolo_addMathLib(struct piccolo_Engine* engine) {
     piccolo_defineGlobal(engine, math, "cos", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, cosNative)));
     piccolo_defineGlobal(engine, math, "tan", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, tanNative)));
     piccolo_defineGlobal(engine, math, "floor", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, floorNative)));
+    piccolo_defineGlobal(engine, math, "sqrt", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sqrtNative)));
 }
