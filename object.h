@@ -13,6 +13,7 @@ enum piccolo_ObjType {
     PICCOLO_OBJ_UPVAL,
     PICCOLO_OBJ_CLOSURE,
     PICCOLO_OBJ_NATIVE_FN,
+    PICCOLO_OBJ_NATIVE_STRUCT,
     PICCOLO_OBJ_PACKAGE,
 };
 
@@ -74,8 +75,26 @@ struct piccolo_ObjClosure {
 
 struct piccolo_ObjNativeFn {
     struct piccolo_Obj obj;
-    piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args);
+    piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self);
+    piccolo_Value self;
 };
+
+struct piccolo_ObjNativeStruct {
+    struct piccolo_Obj obj;
+    void (*free)(void* payload);
+    void (*gcMark)(void* payload);
+    piccolo_Value (*index)(void* payload, struct piccolo_Engine* engine, piccolo_Value key, bool set, piccolo_Value value);
+    const char* typename;
+    size_t payloadSize;
+};
+
+struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjType type, size_t size);
+#define PICCOLO_ALLOCATE_OBJ(engine, type, objType) ((type*)allocateObj(engine, objType, sizeof(type)))
+
+struct piccolo_ObjNativeStruct* piccolo_allocNativeStruct(struct piccolo_Engine* engine, size_t size, const char* name);
+
+#define PICCOLO_ALLOCATE_NATIVE_STRUCT(engine, type, name) ((struct piccolo_Obj*)piccolo_allocNativeStruct(engine, sizeof(type), name))
+#define PICCOLO_GET_PAYLOAD(obj, type) ((type*)((void*)obj + sizeof(struct piccolo_ObjNativeStruct)))
 
 void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj);
 
@@ -86,7 +105,8 @@ struct piccolo_ObjHashmap* piccolo_newHashmap(struct piccolo_Engine* engine);
 struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine);
 struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo_Value* ptr);
 struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, struct piccolo_ObjFunction* function, int upvals);
-struct piccolo_ObjNativeFn* piccolo_makeNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args));
+struct piccolo_ObjNativeFn* piccolo_makeNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self));
+struct piccolo_ObjNativeFn* piccolo_makeBoundNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self), piccolo_Value self);
 struct piccolo_Package* piccolo_newPackage(struct piccolo_Engine* engine);
 
 #endif

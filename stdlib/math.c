@@ -4,7 +4,7 @@
 #include "../util/memory.h"
 #include <stdio.h>
 
-static piccolo_Value minNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+static piccolo_Value minNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
     if(argc != 2) {
         piccolo_runtimeError(engine, "Wrong argument count.");
         return PICCOLO_NIL_VAL();
@@ -21,7 +21,7 @@ static piccolo_Value minNative(struct piccolo_Engine* engine, int argc, piccolo_
     return PICCOLO_NUM_VAL(a < b ? a : b);
 }
 
-static piccolo_Value maxNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+static piccolo_Value maxNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
     if(argc != 2) {
         piccolo_runtimeError(engine, "Wrong argument count.");
         return PICCOLO_NIL_VAL();
@@ -38,7 +38,7 @@ static piccolo_Value maxNative(struct piccolo_Engine* engine, int argc, piccolo_
     return PICCOLO_NUM_VAL(a > b ? a : b);
 }
 
-static piccolo_Value mapNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+static piccolo_Value mapNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
     if(argc != 5) {
         piccolo_runtimeError(engine, "Wrong argument count.");
         return PICCOLO_NIL_VAL();
@@ -61,7 +61,7 @@ static piccolo_Value mapNative(struct piccolo_Engine* engine, int argc, piccolo_
 
 #include <math.h>
 
-static piccolo_Value sinNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+static piccolo_Value sinNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
     if(argc != 1) {
         piccolo_runtimeError(engine, "Wrong argument count.");
     } else {
@@ -76,7 +76,7 @@ static piccolo_Value sinNative(struct piccolo_Engine* engine, int argc, piccolo_
     return PICCOLO_NIL_VAL();
 }
 
-static piccolo_Value cosNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+static piccolo_Value cosNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
     if(argc != 1) {
         piccolo_runtimeError(engine, "Wrong argument count.");
     } else {
@@ -91,7 +91,7 @@ static piccolo_Value cosNative(struct piccolo_Engine* engine, int argc, piccolo_
     return PICCOLO_NIL_VAL();
 }
 
-static piccolo_Value tanNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) {
+static piccolo_Value tanNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
     if(argc != 1) {
         piccolo_runtimeError(engine, "Wrong argument count.");
     } else {
@@ -106,7 +106,7 @@ static piccolo_Value tanNative(struct piccolo_Engine* engine, int argc, piccolo_
     return PICCOLO_NIL_VAL();
 }
 
-static piccolo_Value floorNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) { 
+static piccolo_Value floorNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) { 
     if(argc != 1) {
         piccolo_runtimeError(engine, "Wrong argument count.");
     } else {
@@ -121,7 +121,7 @@ static piccolo_Value floorNative(struct piccolo_Engine* engine, int argc, piccol
     return PICCOLO_NIL_VAL();
 }
 
-static piccolo_Value sqrtNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv) { 
+static piccolo_Value sqrtNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) { 
     if(argc != 1) {
         piccolo_runtimeError(engine, "Wrong argument count.");
     } else {

@@ -8,5 +8,6 @@ void piccolo_addIOLib(struct piccolo_Engine* engine);
 void piccolo_addTimeLib(struct piccolo_Engine* engine);
 void piccolo_addMathLib(struct piccolo_Engine* engine);
 void piccolo_addRandomLib(struct piccolo_Engine* engine);
+void piccolo_addFileLib(struct piccolo_Engine* engine);
 
 #endif

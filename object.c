@@ -46,7 +46,7 @@ static inline struct piccolo_HashmapValue getBase() {
 
 PICCOLO_HASHMAP_IMPL(piccolo_Value, struct piccolo_HashmapValue, Hashmap, PICCOLO_NIL_VAL(), (getBase()))
 
-static struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjType type, size_t size) {
+struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjType type, size_t size) {
     struct piccolo_Obj* obj = PICCOLO_REALLOCATE("obj", engine, NULL, 0, size);
     obj->next = engine->objs;
     engine->objs = obj;
@@ -55,7 +55,15 @@ static struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum picco
     return obj;
 }
 
-#define ALLOCATE_OBJ(engine, type, objType) ((type*)allocateObj(engine, objType, sizeof(type)))
+struct piccolo_ObjNativeStruct* piccolo_allocNativeStruct(struct piccolo_Engine* engine, size_t size, const char* typename) {
+    struct piccolo_ObjNativeStruct* nativeStruct = allocateObj(engine, PICCOLO_OBJ_NATIVE_STRUCT, sizeof(struct piccolo_ObjNativeStruct) + size);
+    nativeStruct->payloadSize = size;
+    nativeStruct->free = NULL;
+    nativeStruct->gcMark = NULL;
+    nativeStruct->index = NULL;
+    nativeStruct->typename = typename;
+    return nativeStruct;
+}
 
 void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj) {
     size_t objSize = 10;
@@ -97,6 +105,13 @@ void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj) {
             objSize = sizeof(struct piccolo_ObjNativeFn);
             break;
         }
+        case PICCOLO_OBJ_NATIVE_STRUCT: {
+            struct piccolo_ObjNativeStruct* nativeStruct = (struct piccolo_ObjNativeStruct*)obj;
+            objSize = sizeof(struct piccolo_ObjNativeStruct) + nativeStruct->payloadSize;
+            if(nativeStruct->free != NULL)
+                nativeStruct->free(PICCOLO_GET_PAYLOAD(obj, void));
+            break;
+        }
         case PICCOLO_OBJ_PACKAGE: break;
     }
     PICCOLO_REALLOCATE("free obj", engine, obj, objSize, 0);
@@ -112,7 +127,7 @@ static uint32_t hashString(const char* string, int length) {
 }
 
 static struct piccolo_ObjString* newString(struct piccolo_Engine* engine, char* string, int len) {
-    struct piccolo_ObjString* result = (struct piccolo_ObjString*) ALLOCATE_OBJ(engine, struct piccolo_ObjString, PICCOLO_OBJ_STRING);
+    struct piccolo_ObjString* result = (struct piccolo_ObjString*) PICCOLO_ALLOCATE_OBJ(engine, struct piccolo_ObjString, PICCOLO_OBJ_STRING);
     result->string = string;
     result->len = len;
     result->utf8Len = 0;
@@ -137,7 +152,7 @@ struct piccolo_ObjString* piccolo_copyString(struct piccolo_Engine* engine, cons
 }
 
 struct piccolo_ObjArray* piccolo_newArray(struct piccolo_Engine* engine, int len) {
-    struct piccolo_ObjArray* array = ALLOCATE_OBJ(engine, struct piccolo_ObjArray, PICCOLO_OBJ_ARRAY);
+    struct piccolo_ObjArray* array = PICCOLO_ALLOCATE_OBJ(engine, struct piccolo_ObjArray, PICCOLO_OBJ_ARRAY);
     piccolo_initValueArray(&array->array);
     for(int i = 0; i < len; i++)
         piccolo_writeValueArray(engine, &array->array, PICCOLO_NIL_VAL());
@@ -145,20 +160,20 @@ struct piccolo_ObjArray* piccolo_newArray(struct piccolo_Engine* engine, int len
 }
 
 struct piccolo_ObjHashmap* piccolo_newHashmap(struct piccolo_Engine* engine) {
-    struct piccolo_ObjHashmap* hashmap = ALLOCATE_OBJ(engine, struct piccolo_ObjHashmap, PICCOLO_OBJ_HASHMAP);
+    struct piccolo_ObjHashmap* hashmap = PICCOLO_ALLOCATE_OBJ(engine, struct piccolo_ObjHashmap, PICCOLO_OBJ_HASHMAP);
     piccolo_initHashmap(&hashmap->hashmap);
     return hashmap;
 }
 
 struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine) {
-    struct piccolo_ObjFunction* function = ALLOCATE_OBJ(engine, struct piccolo_ObjFunction, PICCOLO_OBJ_FUNC);
+    struct piccolo_ObjFunction* function = PICCOLO_ALLOCATE_OBJ(engine, struct piccolo_ObjFunction, PICCOLO_OBJ_FUNC);
     piccolo_initBytecode(&function->bytecode);
     function->arity = 0;
     return function;
 }
 
 struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo_Value* ptr) {
-    struct piccolo_ObjUpval* upval = ALLOCATE_OBJ(engine, struct piccolo_ObjUpval, PICCOLO_OBJ_UPVAL);
+    struct piccolo_ObjUpval* upval = PICCOLO_ALLOCATE_OBJ(engine, struct piccolo_ObjUpval, PICCOLO_OBJ_UPVAL);
     upval->valPtr = ptr;
     upval->open = true;
     upval->next = engine->openUpvals;
@@ -167,20 +182,26 @@ struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo
 }
 
 struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, struct piccolo_ObjFunction* function, int upvals) {
-    struct piccolo_ObjClosure* closure = ALLOCATE_OBJ(engine, struct piccolo_ObjClosure, PICCOLO_OBJ_CLOSURE);
+    struct piccolo_ObjClosure* closure = PICCOLO_ALLOCATE_OBJ(engine, struct piccolo_ObjClosure, PICCOLO_OBJ_CLOSURE);
     closure->prototype = function;
     closure->upvals = PICCOLO_REALLOCATE("upval array", engine, NULL, 0, sizeof(struct piccolo_ObjUpval*) * upvals);
     closure->upvalCnt = upvals;
     return closure;
 }
 
-struct piccolo_ObjNativeFn* piccolo_makeNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args)) {
-    struct piccolo_ObjNativeFn* nativeFn = ALLOCATE_OBJ(engine, struct piccolo_ObjNativeFn, PICCOLO_OBJ_NATIVE_FN);
+struct piccolo_ObjNativeFn* piccolo_makeNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self)) {
+    struct piccolo_ObjNativeFn* nativeFn = PICCOLO_ALLOCATE_OBJ(engine, struct piccolo_ObjNativeFn, PICCOLO_OBJ_NATIVE_FN);
     nativeFn->native = native;
     return nativeFn;
 }
 
+struct piccolo_ObjNativeFn* piccolo_makeBoundNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self), piccolo_Value self) {
+    struct piccolo_ObjNativeFn* nativeFn = piccolo_makeNative(engine, native);
+    nativeFn->self = self;
+    return nativeFn;
+}
+
 struct piccolo_Package* piccolo_newPackage(struct piccolo_Engine* engine) {
-    struct piccolo_Package* package = ALLOCATE_OBJ(engine, struct piccolo_Package, PICCOLO_OBJ_PACKAGE);
+    struct piccolo_Package* package = PICCOLO_ALLOCATE_OBJ(engine, struct piccolo_Package, PICCOLO_OBJ_PACKAGE);
     return package;
 }

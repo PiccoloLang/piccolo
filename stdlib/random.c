@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static piccolo_Value randomValNative(struct piccolo_Engine* engine, int argc, piccolo_Value* /* Was missing pointer in type */ argv) {
+static piccolo_Value randomValNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
     if(argc != 0) {
         piccolo_runtimeError(engine, "Wrong argument count.");
         return PICCOLO_NIL_VAL();

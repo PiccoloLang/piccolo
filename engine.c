@@ -183,6 +183,15 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
             }
             break;
         }
+        case PICCOLO_OBJ_NATIVE_STRUCT: {
+            struct piccolo_ObjNativeStruct* nativeStruct = (struct piccolo_ObjNativeStruct*)container;
+            if(nativeStruct->index != NULL) {
+                return nativeStruct->index(PICCOLO_GET_PAYLOAD(nativeStruct, void), engine, idx, set, value);
+            } else {
+                piccolo_runtimeError(engine, "Cannot index %s", nativeStruct->typename);
+            }
+            break;
+        }
         default: {
             piccolo_runtimeError(engine, "Cannot index %s", piccolo_getTypeName(PICCOLO_OBJ_VAL(container)));
             return PICCOLO_NIL_VAL();
@@ -604,10 +613,10 @@ static bool run(struct piccolo_Engine* engine) {
                     struct piccolo_ObjNativeFn* native = (struct piccolo_ObjNativeFn*)PICCOLO_AS_OBJ(func);
                     popFrame(engine);
                     if(argCount == 0) {
-                        piccolo_enginePushStack(engine, native->native(engine, 0, NULL));
+                        piccolo_enginePushStack(engine, native->native(engine, 0, NULL, native->self));
                         break;
                     }
-                    piccolo_enginePushStack(engine, native->native(engine, argCount, &engine->locals.values[engine->callFrames.values[engine->callFrames.count].localStart]));
+                    piccolo_enginePushStack(engine, native->native(engine, argCount, &engine->locals.values[engine->callFrames.values[engine->callFrames.count].localStart], native->self));
                     engine->locals.count -= argCount;
                     break;
                 }

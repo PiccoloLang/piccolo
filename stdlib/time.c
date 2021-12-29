@@ -4,7 +4,7 @@
 #include "../util/memory.h"
 #include <time.h>
 
-static piccolo_Value clockNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+static piccolo_Value clockNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self) {
     double time = (double)clock() / (double)CLOCKS_PER_SEC;
     if(argc != 0) {
         piccolo_runtimeError(engine, "Wrong argument count.");
@@ -12,7 +12,7 @@ static piccolo_Value clockNative(struct piccolo_Engine* engine, int argc, struct
     return PICCOLO_NUM_VAL(time);
 }
 
-static piccolo_Value sleepNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+static piccolo_Value sleepNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self) {
     if(argc != 1) {
         piccolo_runtimeError(engine, "Wrong argument count.");
     } else {

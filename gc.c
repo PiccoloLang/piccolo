@@ -2,8 +2,6 @@
 #include "gc.h"
 #include <stdio.h>
 
-static void markValue(piccolo_Value value);
-
 static void markObj(struct piccolo_Obj* obj) {
     if(obj == NULL)
         return;
@@ -14,15 +12,15 @@ static void markObj(struct piccolo_Obj* obj) {
         case PICCOLO_OBJ_ARRAY: {
             struct piccolo_ObjArray* array = (struct piccolo_ObjArray*)obj;
             for(int i = 0; i < array->array.count; i++)
-                markValue(array->array.values[i]);
+                piccolo_gcMarkValue(array->array.values[i]);
             break;
         }
         case PICCOLO_OBJ_HASHMAP: {
             struct piccolo_ObjHashmap* hashmap = (struct piccolo_ObjHashmap*)obj;
             for(int i = 0; i < hashmap->hashmap.capacity; i++) {
                 if(!piccolo_HashmapIsBaseKey(hashmap->hashmap.entries[i].key)) {
-                    markValue(hashmap->hashmap.entries[i].key);
-                    markValue(hashmap->hashmap.entries[i].val.value);
+                    piccolo_gcMarkValue(hashmap->hashmap.entries[i].key);
+                    piccolo_gcMarkValue(hashmap->hashmap.entries[i].val.value);
                 }
             }
             break;
@@ -30,12 +28,12 @@ static void markObj(struct piccolo_Obj* obj) {
         case PICCOLO_OBJ_FUNC: {
             struct piccolo_ObjFunction* func = (struct piccolo_ObjFunction*)obj;
             for(int i = 0; i < func->bytecode.constants.count; i++)
-                markValue(func->bytecode.constants.values[i]);
+                piccolo_gcMarkValue(func->bytecode.constants.values[i]);
             break;
         }
         case PICCOLO_OBJ_UPVAL: {
             struct piccolo_ObjUpval* upval = (struct piccolo_ObjUpval*)obj;
-            markValue(*upval->valPtr);
+            piccolo_gcMarkValue(*upval->valPtr);
             break;
         }
         case PICCOLO_OBJ_CLOSURE: {
@@ -46,13 +44,19 @@ static void markObj(struct piccolo_Obj* obj) {
             }
             break;
         }
+        case PICCOLO_OBJ_NATIVE_STRUCT: {
+            struct piccolo_ObjNativeStruct* nativeStruct = (struct piccolo_ObjNativeStruct*)obj;
+            if(nativeStruct->gcMark != NULL)
+                nativeStruct->gcMark(PICCOLO_GET_PAYLOAD(obj, void));
+            break;
+        }
         case PICCOLO_OBJ_STRING: break;
         case PICCOLO_OBJ_NATIVE_FN: break;
         case PICCOLO_OBJ_PACKAGE: break;
     }
 }
 
-static void markValue(piccolo_Value value) {
+void piccolo_gcMarkValue(piccolo_Value value) {
     if(PICCOLO_IS_OBJ(value)) {
         markObj(PICCOLO_AS_OBJ(value));
     }
@@ -61,9 +65,9 @@ static void markValue(piccolo_Value value) {
 static void markPackage(struct piccolo_Package* package) {
     package->obj.marked = true;
     for(int i = 0; i < package->bytecode.constants.count; i++)
-        markValue(package->bytecode.constants.values[i]);
+        piccolo_gcMarkValue(package->bytecode.constants.values[i]);
     for(int i = 0; i < package->globals.count; i++)
-        markValue(package->globals.values[i]);
+        piccolo_gcMarkValue(package->globals.values[i]);
     for(int i = 0; i < package->globalIdxs.capacity; i++)
         if(package->globalIdxs.entries[i].key != NULL)
             package->globalIdxs.entries[i].key->obj.marked = true;
@@ -71,13 +75,13 @@ static void markPackage(struct piccolo_Package* package) {
 
 static void markRoots(struct piccolo_Engine* engine) {
     for(piccolo_Value* iter = engine->stack; iter != engine->stackTop; iter++)
-        markValue(*iter);
+        piccolo_gcMarkValue(*iter);
     for(int i = 0; i < engine->callFrames.count; i++) {
         if(engine->callFrames.values[i].closure != NULL)
             markObj((struct piccolo_Obj*)engine->callFrames.values[i].closure);
     }
     for(int i = 0; i < engine->locals.count; i++)
-        markValue(engine->locals.values[i]);
+        piccolo_gcMarkValue(engine->locals.values[i]);
     for(int i = 0; i < engine->packages.count; i++)
         markPackage(engine->packages.values[i]);
 }

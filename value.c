@@ -63,6 +63,10 @@ static void printObject(struct piccolo_Obj* obj) {
         struct piccolo_Package* package = ((struct piccolo_Package*)obj);
         printf("<package \"%s\">", package->packageName);
     }
+    if(obj->type == PICCOLO_OBJ_NATIVE_STRUCT) {
+        struct piccolo_ObjNativeStruct* nativeStruct = (struct piccolo_ObjNativeStruct*)obj;
+        printf("<%s>", nativeStruct->typename);
+    }
     obj->printed = false;
 }
 

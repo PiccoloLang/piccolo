@@ -4,7 +4,7 @@
 #include "../util/memory.h"
 #include <stdio.h>
 
-static piccolo_Value printNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+static piccolo_Value printNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self) {
     for(int i = 0; i < argc; i++) {
         piccolo_printValue(args[i]);
         printf(" ");
@@ -13,7 +13,7 @@ static piccolo_Value printNative(struct piccolo_Engine* engine, int argc, struct
     return PICCOLO_NIL_VAL();
 }
 
-static piccolo_Value inputNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args) {
+static piccolo_Value inputNative(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self) {
     if(argc != 0) {
         piccolo_runtimeError(engine, "Wrong argument count.");
         return PICCOLO_NIL_VAL();
