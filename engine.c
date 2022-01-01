@@ -355,7 +355,7 @@ static bool run(struct piccolo_Engine* engine) {
                     }
 
                     struct piccolo_ObjArray* result = piccolo_newArray(engine, (int) newCount);
-                    if(!result->array.values) {
+                    if(!result->array.values && newCount > 0) {
                         piccolo_runtimeError(engine, "Failed to allocate for new array.");
                         break;
                     }
