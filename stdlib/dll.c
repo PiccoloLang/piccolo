@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #ifdef _WIN32
-
+#include <ShlObj_core.h>
 #else
 #include <dlfcn.h>
 #endif
@@ -15,7 +15,7 @@
 struct dll {
 
 #ifdef _WIN32
-    #warning Windows DLLs are not supported yet :(
+    HMODULE library;
 #else
     void* handle;
 #endif
@@ -32,7 +32,7 @@ static piccolo_Value dllCloseNative(struct piccolo_Engine* engine, int argc, pic
     struct piccolo_Obj* obj = PICCOLO_AS_OBJ(self);
     struct dll* dll = PICCOLO_GET_PAYLOAD(obj, struct dll);
 #ifdef _WIN32
-    #warning Windows DLLs are not supported yet :(
+    FreeLibrary(dll->library);
 #else
     dlclose(dll->handle);
 #endif
@@ -54,7 +54,12 @@ static piccolo_Value dllGetNative(struct piccolo_Engine* engine, int argc, picco
     struct dll* dll = PICCOLO_GET_PAYLOAD(obj, struct dll);
     piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self);
 #ifdef _WIN32
-    #warning Windows DLLs are not supported yet :(
+    void* dllObj = GetProcAddress(dll->library, symbolName->string);
+    if(dllObj == NULL) {
+        piccolo_runtimeError(engine, "Invalid DLL function.");
+        return PICCOLO_NIL_VAL();
+    }
+    native = dllObj;
 #else
     void* dllObj = dlsym(dll->handle, symbolName->string);
     if(dllObj == NULL) {
@@ -114,7 +119,11 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
     struct dll* dll = PICCOLO_GET_PAYLOAD(dllNativeStruct, struct dll);
 
 #ifdef _WIN32
-    #warning Windows DLLs are not supported yet :(
+    dll->library = LoadLibrary(path);
+    if(dll->handle == NULL) {
+        piccolo_runtimeError(engine, "Could not open DLL.");
+        return PICCOLO_NIL_VAL();
+    }
 #else
     dll->handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
     if(dll->handle == NULL) {
