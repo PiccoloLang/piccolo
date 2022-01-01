@@ -92,7 +92,7 @@ void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj) {
         case PICCOLO_OBJ_UPVAL: {
             objSize = sizeof(struct piccolo_ObjUpval);
             if(!((struct piccolo_ObjUpval*)obj)->open)
-                PICCOLO_REALLOCATE("free heap upval", engine, ((struct piccolo_ObjUpval*)obj)->valPtr, sizeof(struct piccolo_Value), 0);
+                PICCOLO_REALLOCATE("free heap upval", engine, ((struct piccolo_ObjUpval*)obj)->val.ptr, sizeof(struct piccolo_Value), 0);
             break;
         }
         case PICCOLO_OBJ_CLOSURE: {
@@ -177,9 +177,9 @@ struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine) {
     return function;
 }
 
-struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo_Value* ptr) {
+struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, int idx) {
     struct piccolo_ObjUpval* upval = PICCOLO_ALLOCATE_OBJ(engine, struct piccolo_ObjUpval, PICCOLO_OBJ_UPVAL);
-    upval->valPtr = ptr;
+    upval->val.idx = idx;
     upval->open = true;
     upval->next = engine->openUpvals;
     engine->openUpvals = upval;

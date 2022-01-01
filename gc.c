@@ -33,7 +33,8 @@ static void markObj(struct piccolo_Obj* obj) {
         }
         case PICCOLO_OBJ_UPVAL: {
             struct piccolo_ObjUpval* upval = (struct piccolo_ObjUpval*)obj;
-            piccolo_gcMarkValue(*upval->valPtr);
+            if(!upval->open)
+                piccolo_gcMarkValue(*upval->val.ptr);
             break;
         }
         case PICCOLO_OBJ_CLOSURE: {

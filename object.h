@@ -58,7 +58,10 @@ struct piccolo_ObjFunction {
 
 struct piccolo_ObjUpval {
     struct piccolo_Obj obj;
-    piccolo_Value* valPtr;
+    union {
+        piccolo_Value *ptr;
+        int idx;
+    } val;
     bool open;
     struct piccolo_ObjUpval* next;
 };
@@ -103,7 +106,7 @@ struct piccolo_ObjString* piccolo_copyString(struct piccolo_Engine* engine, cons
 struct piccolo_ObjArray* piccolo_newArray(struct piccolo_Engine* engine, int len);
 struct piccolo_ObjHashmap* piccolo_newHashmap(struct piccolo_Engine* engine);
 struct piccolo_ObjFunction* piccolo_newFunction(struct piccolo_Engine* engine);
-struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, piccolo_Value* ptr);
+struct piccolo_ObjUpval* piccolo_newUpval(struct piccolo_Engine* engine, int idx);
 struct piccolo_ObjClosure* piccolo_newClosure(struct piccolo_Engine* engine, struct piccolo_ObjFunction* function, int upvals);
 struct piccolo_ObjNativeFn* piccolo_makeNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self));
 struct piccolo_ObjNativeFn* piccolo_makeBoundNative(struct piccolo_Engine* engine, piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, struct piccolo_Value* args, piccolo_Value self), piccolo_Value self);

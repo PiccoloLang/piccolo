@@ -209,7 +209,7 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
 }
 
 static bool shouldCloseUpval(struct piccolo_Engine* engine, struct piccolo_ObjUpval* upval) {
-    return upval->valPtr >= engine->locals.values + engine->locals.count;
+    return upval->val.idx >= engine->locals.count;
 }
 
 static void pushFrame(struct piccolo_Engine* engine) {
@@ -228,7 +228,7 @@ static bool run(struct piccolo_Engine* engine) {
     engine->hadError = false;
     while(true) {
         if(engine->callFrames.capacity >= PICCOLO_MAX_FRAMES) {
-            // TODO: Nicer output when encountering invalid call frame state
+            // TODO: Nir output when encountering invalid call frame state
             piccolo_enginePrintError(engine, "Call frame depth exceeded limit (%i).\n", PICCOLO_MAX_FRAMES);
             break;
         }
@@ -656,7 +656,7 @@ static bool run(struct piccolo_Engine* engine) {
                 for(int i = 0; i < upvals; i++) {
                     int slot = READ_PARAM();
                     if(READ_BYTE())
-                        closure->upvals[i] = piccolo_newUpval(engine, &engine->locals.values[CURR_FRAME.localStart + slot]);
+                        closure->upvals[i] = piccolo_newUpval(engine, slot + CURR_FRAME.localStart);
                     else
                         closure->upvals[i] = CURR_FRAME.closure->upvals[slot];
                 }
@@ -666,12 +666,24 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_GET_UPVAL: {
                 int slot = READ_PARAM();
-                piccolo_enginePushStack(engine, *CURR_FRAME.closure->upvals[slot]->valPtr);
+                struct piccolo_ObjUpval* upval = CURR_FRAME.closure->upvals[slot];
+                if(upval->open) {
+                    int idx = CURR_FRAME.closure->upvals[slot]->val.idx;
+                    piccolo_enginePushStack(engine, engine->locals.values[idx]);
+                } else {
+                    piccolo_enginePushStack(engine, *CURR_FRAME.closure->upvals[slot]->val.ptr);
+                }
                 break;
             }
             case PICCOLO_OP_SET_UPVAL: {
                 int slot = READ_PARAM();
-                *CURR_FRAME.closure->upvals[slot]->valPtr = piccolo_enginePeekStack(engine, 1);
+                struct piccolo_ObjUpval* upval = CURR_FRAME.closure->upvals[slot];
+                piccolo_Value val = piccolo_enginePeekStack(engine, 1);
+                if(upval->open) {
+                    engine->locals.values[upval->val.idx] = val;
+                } else {
+                    *upval->val.ptr = val;
+                }
                 break;
             }
             case PICCOLO_OP_APPEND: {
@@ -688,8 +700,8 @@ static bool run(struct piccolo_Engine* engine) {
                     if(shouldCloseUpval(engine, curr)) {
                         curr->open = false;
                         piccolo_Value* heapUpval = PICCOLO_REALLOCATE("heap upval", engine, NULL, 0, sizeof(piccolo_Value));
-                        *heapUpval = *curr->valPtr;
-                        curr->valPtr = heapUpval;
+                        *heapUpval = engine->locals.values[curr->val.idx];
+                        curr->val.ptr = heapUpval;
                     } else {
                         curr->next = newOpen;
                         newOpen = curr;
