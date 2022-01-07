@@ -45,7 +45,7 @@ static piccolo_Value dllGetNative(struct piccolo_Engine* engine, int argc, picco
         return PICCOLO_NIL_VAL();
     }
     piccolo_Value symbolNameVal = argv[0];
-    if(!PICCOLO_IS_OBJ(symbolNameVal) || PICCOLO_AS_OBJ(symbolNameVal)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(symbolNameVal)) {
         piccolo_runtimeError(engine, "Function name must be a string.");
         return PICCOLO_NIL_VAL();
     }
@@ -79,7 +79,7 @@ static void gcMarkDll(void* payload) {
 
 static piccolo_Value indexDll(void* payload, struct piccolo_Engine* engine, piccolo_Value key, bool set, piccolo_Value value) {
     struct dll* dll = (struct dll*)payload;
-    if(!PICCOLO_IS_OBJ(key) || PICCOLO_AS_OBJ(key)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(key)) {
         piccolo_runtimeError(engine, "Property must be a string.");
         return PICCOLO_NIL_VAL();
     }
@@ -108,7 +108,7 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
         return PICCOLO_NIL_VAL();
     }
     piccolo_Value pathVal = argv[0];
-    if(!PICCOLO_IS_OBJ(pathVal) || PICCOLO_AS_OBJ(pathVal)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(pathVal)) {
         piccolo_runtimeError(engine, "Argument must be a string.");
         return PICCOLO_NIL_VAL();
     }

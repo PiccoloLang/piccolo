@@ -615,7 +615,7 @@ static bool run(struct piccolo_Engine* engine) {
                     break;
                 }
 
-                if(!PICCOLO_IS_OBJ(func) || (PICCOLO_AS_OBJ(func)->type != PICCOLO_OBJ_CLOSURE && PICCOLO_AS_OBJ(func)->type != PICCOLO_OBJ_NATIVE_FN)) {
+                if(!PICCOLO_IS_CLOSURE(func) && !PICCOLO_IS_NATIVE_FN(func)) {
                     popFrame(engine);
                     piccolo_runtimeError(engine, "Cannot call %s.", piccolo_getTypeName(func));
                     break;
@@ -713,18 +713,15 @@ static bool run(struct piccolo_Engine* engine) {
             }
             case PICCOLO_OP_GET_LEN: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
-                if(PICCOLO_IS_OBJ(val)) {
-                    struct piccolo_Obj* obj = PICCOLO_AS_OBJ(val);
-                    if(obj->type == PICCOLO_OBJ_STRING) {
-                        struct piccolo_ObjString* str = (struct piccolo_ObjString*)obj;
-                        piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(str->utf8Len));
-                        break;
-                    }
-                    if(obj->type == PICCOLO_OBJ_ARRAY) {
-                        struct piccolo_ObjArray* arr = (struct piccolo_ObjArray*)obj;
-                        piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(arr->array.count));
-                        break;
-                    }
+                if(PICCOLO_IS_STRING(val)) {
+                    struct piccolo_ObjString* str = PICCOLO_AS_OBJ(val);
+                    piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(str->utf8Len));
+                    break;
+                }
+                if(PICCOLO_IS_ARRAY(val)) {
+                    struct piccolo_ObjArray* arr = PICCOLO_AS_OBJ(val);
+                    piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(arr->array.count));
+                    break;
                 }
                 
                 piccolo_runtimeError(engine, "Cannot get length of %s.", piccolo_getTypeName(val));
@@ -733,7 +730,7 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_IN: {
                 piccolo_Value container = piccolo_enginePopStack(engine);
                 piccolo_Value key = piccolo_enginePopStack(engine);
-                if(!PICCOLO_IS_OBJ(container) || PICCOLO_AS_OBJ(container)->type != PICCOLO_OBJ_HASHMAP) {
+                if(!PICCOLO_IS_HASHMAP(container)) {
                     piccolo_runtimeError(engine, "Container must be a hashmap.");
                     break;
                 }
@@ -748,9 +745,9 @@ static bool run(struct piccolo_Engine* engine) {
                     piccolo_runtimeError(engine, "Cannot iterate over %s.", piccolo_getTypeName(container));
                     break;
                 }
-                if(PICCOLO_AS_OBJ(container)->type != PICCOLO_OBJ_ARRAY &&
-                   PICCOLO_AS_OBJ(container)->type != PICCOLO_OBJ_STRING &&
-                   PICCOLO_AS_OBJ(container)->type != PICCOLO_OBJ_HASHMAP) {
+                if(!PICCOLO_IS_ARRAY(container) &&
+                   !PICCOLO_IS_STRING(container) &&
+                   !PICCOLO_IS_HASHMAP(container)) {
                     piccolo_runtimeError(engine, "Cannot iterate over %s.", piccolo_getTypeName(container));
                     break;
                 }
@@ -901,17 +898,29 @@ bool piccolo_executePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     pushFrame(engine);
     CURR_FRAME.closure = NULL;
     CURR_FRAME.package = package;
+    CURR_FRAME.localStart = 0;
     package->executed = true;
     bool result = piccolo_executeBytecode(engine, &package->bytecode);
     return result;
 }
 
 bool piccolo_executeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode) {
-    CURR_FRAME.localStart = 0;
     CURR_FRAME.ip = 0;
     CURR_FRAME.bytecode = bytecode;
     engine->stackTop = engine->stack;
     return run(engine);
+}
+
+piccolo_Value piccolo_callFunction(struct piccolo_Engine* engine, struct piccolo_ObjClosure* closure, int argc, piccolo_Value* argv) {
+    pushFrame(engine);
+    CURR_FRAME.localStart = 0;
+    for(int i = 0; i < argc; i++) {
+        piccolo_writeValueArray(engine, &engine->locals, argv[i]);
+    }
+    CURR_FRAME.closure = closure;
+    CURR_FRAME.package = closure->package;
+    piccolo_executeBytecode(engine, &closure->prototype->bytecode);
+    return piccolo_enginePopStack(engine);
 }
 
 void piccolo_enginePrintError(struct piccolo_Engine* engine, const char* format, ...) {

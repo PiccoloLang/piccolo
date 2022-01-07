@@ -21,3 +21,16 @@ void piccolo_defineGlobalWithNameSize(struct piccolo_Engine* engine, struct picc
 void piccolo_defineGlobal(struct piccolo_Engine* engine, struct piccolo_Package* package, const char* name, struct piccolo_Value value) {
     piccolo_defineGlobalWithNameSize(engine, package, name, strlen(name), value);
 }
+
+piccolo_Value piccolo_getGlobalWithNameSize(struct piccolo_Engine* engine, struct piccolo_Package* package, const char* name, size_t nameLen) {
+    struct piccolo_ObjString* varName = piccolo_copyString(engine, name, nameLen);
+    int idx = piccolo_getGlobalTable(engine, &package->globalIdxs, varName);
+    if(idx == -1) {
+        return PICCOLO_NIL_VAL(); // TODO: There needs to be some way to dilliate actual nil from errors
+    }
+    return package->globals.values[idx];
+}
+
+piccolo_Value piccolo_getGlobal(struct piccolo_Engine* engine, struct piccolo_Package* package, const char* name) {
+    return piccolo_getGlobalWithNameSize(engine, package, name, strlen(name));
+}

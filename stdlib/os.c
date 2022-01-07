@@ -12,7 +12,7 @@ static piccolo_Value shellNative(struct piccolo_Engine* engine, int argc, piccol
         return PICCOLO_NIL_VAL();
     }
     piccolo_Value cmdVal = argv[0];
-    if(!PICCOLO_IS_OBJ(cmdVal) || PICCOLO_AS_OBJ(cmdVal)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(cmdVal)) {
         piccolo_runtimeError(engine, "Command must be a string.");
         return PICCOLO_NIL_VAL();
     }

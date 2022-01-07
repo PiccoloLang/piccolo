@@ -46,6 +46,10 @@ static inline struct piccolo_HashmapValue getBase() {
 
 PICCOLO_HASHMAP_IMPL(piccolo_Value, struct piccolo_HashmapValue, Hashmap, PICCOLO_NIL_VAL(), (getBase()))
 
+bool piccolo_isObjOfType(piccolo_Value val, enum piccolo_ObjType type) {
+    return PICCOLO_IS_OBJ(val) && PICCOLO_AS_OBJ(val)->type == type;
+}
+
 struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjType type, size_t size) {
     struct piccolo_Obj* obj = PICCOLO_REALLOCATE("obj", engine, NULL, 0, size);
     obj->next = engine->objs;

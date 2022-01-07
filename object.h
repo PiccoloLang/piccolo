@@ -91,6 +91,18 @@ struct piccolo_ObjNativeStruct {
     size_t payloadSize;
 };
 
+bool piccolo_isObjOfType(piccolo_Value val, enum piccolo_ObjType type);
+
+#define PICCOLO_IS_STRING(val) (piccolo_isObjOfType(val, PICCOLO_OBJ_STRING))
+#define PICCOLO_IS_ARRAY(val) (piccolo_isObjOfType(val, PICCOLO_OBJ_ARRAY))
+#define PICCOLO_IS_HASHMAP(val) (piccolo_isObjOfType(val, PICCOLO_OBJ_HASHMAP))
+#define PICCOLO_IS_FUNC(val) (piccolo_isObjOfType(val, PICCOLO_OBJ_FUNC))
+#define PICCOLO_IS_UPVAL(val) (piccolo_isObjOfType(val, PICCOLO_OBJ_UPVAL))
+#define PICCOLO_IS_CLOSURE(val) (piccolo_isObjOfType(val, PICCOLO_OBJ_CLOSURE))
+#define PICCOLO_IS_NATIVE_FN(val) (piccolo_isObjOfType(val, PICCOLO_OBJ_NATIVE_FN))
+#define PICCOLO_IS_NATIVE_STRUCT(val) (piccolo_isObjOfType(val, PICCOLO_OBJ_NATIVE_STRUCT))
+#define PICCOLO_IS_PACKAGE(val) (piccolo_isObjOfType(val, PICCOLO_OBJ_PACKAGE))
+
 struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjType type, size_t size);
 #define PICCOLO_ALLOCATE_OBJ(engine, type, objType) ((type*)allocateObj(engine, objType, sizeof(type)))
 

@@ -13,7 +13,7 @@ static piccolo_Value readNative(struct piccolo_Engine* engine, int argc, piccolo
         return PICCOLO_NIL_VAL();
     }
     piccolo_Value pathVal = argv[0];
-    if(!PICCOLO_IS_OBJ(pathVal) || PICCOLO_AS_OBJ(pathVal)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(pathVal)) {
         piccolo_runtimeError(engine, "Path must be a string.");
         return PICCOLO_NIL_VAL();
     }
@@ -33,12 +33,12 @@ static piccolo_Value writeNative(struct piccolo_Engine* engine, int argc, piccol
         return PICCOLO_NIL_VAL();
     }
     piccolo_Value pathVal = argv[0];
-    if(!PICCOLO_IS_OBJ(pathVal) || PICCOLO_AS_OBJ(pathVal)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(pathVal)) {
         piccolo_runtimeError(engine, "Path must be a string.");
         return PICCOLO_NIL_VAL();
     }
     piccolo_Value data = argv[1];
-    if(!PICCOLO_IS_OBJ(data) || PICCOLO_AS_OBJ(data)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(data)) {
         piccolo_runtimeError(engine, "Data must be a string.");
         return PICCOLO_NIL_VAL();
     }
@@ -55,7 +55,7 @@ static piccolo_Value writeNative(struct piccolo_Engine* engine, int argc, piccol
 struct file {
     FILE* file;
     piccolo_Value path, mode;
-    piccolo_Value write, readChar, close;
+    piccolo_Value write, writeByte, readChar, close;
 };
 
 static void gcMarkFile(void* payload) {
@@ -64,13 +64,14 @@ static void gcMarkFile(void* payload) {
     piccolo_gcMarkValue(file->mode);
 
     piccolo_gcMarkValue(file->write);
+    piccolo_gcMarkValue(file->writeByte);
     piccolo_gcMarkValue(file->readChar);
     piccolo_gcMarkValue(file->close);
 }
 
 static piccolo_Value indexFile(void* payload, struct piccolo_Engine* engine, piccolo_Value key, bool set, piccolo_Value value) {
     struct file* file = (struct file*)payload;
-    if(!PICCOLO_IS_OBJ(key) || PICCOLO_AS_OBJ(key)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(key)) {
         piccolo_runtimeError(engine, "Property must be a string.");
         return PICCOLO_NIL_VAL();
     }
@@ -97,6 +98,13 @@ static piccolo_Value indexFile(void* payload, struct piccolo_Engine* engine, pic
         }
         return file->write;
     }
+    if(strcmp(keyStr->string, "writeByte") == 0) {
+        if(set) {
+            piccolo_runtimeError(engine, "Cannot set write.");
+            return PICCOLO_NIL_VAL();
+        }
+        return file->writeByte;
+    }
     if(strcmp(keyStr->string, "readChar") == 0) {
         if(set) {
             piccolo_runtimeError(engine, "Cannot set readChar.");
@@ -122,13 +130,28 @@ static piccolo_Value fileWriteNative(struct piccolo_Engine* engine, int argc, pi
         return PICCOLO_NIL_VAL();
     }
     piccolo_Value data = argv[0];
-    if(!PICCOLO_IS_OBJ(data) || PICCOLO_AS_OBJ(data)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(data)) {
         piccolo_runtimeError(engine, "Data must be a string.");
         return PICCOLO_NIL_VAL();
     }
     struct file* file = PICCOLO_GET_PAYLOAD(PICCOLO_AS_OBJ(self), struct file);
     struct piccolo_ObjString* str = PICCOLO_AS_OBJ(data);
     fprintf(file->file, "%s", str->string);
+    return PICCOLO_NIL_VAL();
+}
+
+static piccolo_Value fileWriteByteNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
+    if(argc != 1) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+        return PICCOLO_NIL_VAL();
+    }
+    piccolo_Value byte = argv[0];
+    if(!PICCOLO_IS_NUM(byte)) {
+        piccolo_runtimeError(engine, "Byte must be a number.");
+        return PICCOLO_NIL_VAL();
+    }
+    struct file* file = PICCOLO_GET_PAYLOAD(PICCOLO_AS_OBJ(self), struct file);
+    fprintf(file->file, "%c", (int)PICCOLO_AS_NUM(byte));
     return PICCOLO_NIL_VAL();
 }
 
@@ -168,12 +191,12 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
         return PICCOLO_NIL_VAL();
     }
     piccolo_Value pathVal = argv[0];
-    if(!PICCOLO_IS_OBJ(pathVal) || PICCOLO_AS_OBJ(pathVal)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(pathVal)) {
         piccolo_runtimeError(engine, "Path must be a string.");
         return PICCOLO_NIL_VAL();
     }
     piccolo_Value modeVal = argv[1];
-    if(!PICCOLO_IS_OBJ(modeVal) || PICCOLO_AS_OBJ(modeVal)->type != PICCOLO_OBJ_STRING) {
+    if(!PICCOLO_IS_STRING(modeVal)) {
         piccolo_runtimeError(engine, "Invalid file mode.");
         return PICCOLO_NIL_VAL();
     }
@@ -202,6 +225,7 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
     payload->mode = modeVal;
 
     payload->write = PICCOLO_OBJ_VAL(piccolo_makeBoundNative(engine, fileWriteNative, PICCOLO_OBJ_VAL(fileObj)));
+    payload->writeByte = PICCOLO_OBJ_VAL(piccolo_makeBoundNative(engine, fileWriteByteNative, PICCOLO_OBJ_VAL(fileObj)));
     payload->readChar = PICCOLO_OBJ_VAL(piccolo_makeBoundNative(engine, fileReadCharNative, PICCOLO_OBJ_VAL(fileObj)));
     payload->close = PICCOLO_OBJ_VAL(piccolo_makeBoundNative(engine, fileCloseNative, PICCOLO_OBJ_VAL(fileObj)));
 

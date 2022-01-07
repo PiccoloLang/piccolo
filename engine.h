@@ -48,6 +48,7 @@ void piccolo_freeEngine(struct piccolo_Engine* engine);
 
 bool piccolo_executePackage(struct piccolo_Engine* engine, struct piccolo_Package* package);
 bool piccolo_executeBytecode(struct piccolo_Engine* engine, struct piccolo_Bytecode* bytecode);
+piccolo_Value piccolo_callFunction(struct piccolo_Engine* engine, struct piccolo_ObjClosure* closure, int argc, piccolo_Value* argv);
 
 void piccolo_enginePrintError(struct piccolo_Engine* engine, const char* format, ...);
 
