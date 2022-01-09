@@ -222,6 +222,17 @@ static void popFrame(struct piccolo_Engine* engine) {
     engine->callFrames.count--;
 }
 
+static struct piccolo_ObjUpval* findUpval(struct piccolo_Engine* engine, int slot) {
+    struct piccolo_ObjUpval* curr = engine->openUpvals;
+    while(curr != NULL) {
+        if(curr->val.idx == slot) {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    return piccolo_newUpval(engine, slot);
+}
+
 static bool run(struct piccolo_Engine* engine) {
 #define READ_BYTE() (CURR_FRAME.bytecode->code.values[CURR_FRAME.ip++])
 #define READ_PARAM() ((READ_BYTE() << 8) + READ_BYTE())
@@ -656,7 +667,7 @@ static bool run(struct piccolo_Engine* engine) {
                 for(int i = 0; i < upvals; i++) {
                     int slot = READ_PARAM();
                     if(READ_BYTE())
-                        closure->upvals[i] = piccolo_newUpval(engine, slot + CURR_FRAME.localStart);
+                        closure->upvals[i] = findUpval(engine, slot + CURR_FRAME.localStart);
                     else
                         closure->upvals[i] = CURR_FRAME.closure->upvals[slot];
                 }
