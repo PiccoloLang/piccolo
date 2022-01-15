@@ -49,7 +49,7 @@ static piccolo_Value dllGetNative(struct piccolo_Engine* engine, int argc, picco
         piccolo_runtimeError(engine, "Function name must be a string.");
         return PICCOLO_NIL_VAL();
     }
-    struct piccolo_ObjString* symbolName = PICCOLO_AS_OBJ(symbolNameVal);
+    struct piccolo_ObjString* symbolName = (struct piccolo_ObjString*) PICCOLO_AS_OBJ(symbolNameVal);
     struct piccolo_Obj* obj = PICCOLO_AS_OBJ(self);
     struct dll* dll = PICCOLO_GET_PAYLOAD(obj, struct dll);
     piccolo_Value (*native)(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self);
@@ -83,7 +83,7 @@ static piccolo_Value indexDll(void* payload, struct piccolo_Engine* engine, picc
         piccolo_runtimeError(engine, "Property must be a string.");
         return PICCOLO_NIL_VAL();
     }
-    struct piccolo_ObjString* keyStr = PICCOLO_AS_OBJ(key);
+    struct piccolo_ObjString* keyStr = (struct piccolo_ObjString*) PICCOLO_AS_OBJ(key);
     if(strcmp(keyStr->string, "close") == 0) {
         if(set) {
             piccolo_runtimeError(engine, "Cannot set close.");
@@ -113,7 +113,7 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
         return PICCOLO_NIL_VAL();
     }
     char* path = ((struct piccolo_ObjString*)PICCOLO_AS_OBJ(pathVal))->string;
-    struct piccolo_ObjNativeStruct* dllNativeStruct = PICCOLO_ALLOCATE_NATIVE_STRUCT(engine, struct dll, "dll");
+    struct piccolo_ObjNativeStruct* dllNativeStruct = (struct piccolo_ObjNativeStruct*) PICCOLO_ALLOCATE_NATIVE_STRUCT(engine, struct dll, "dll");
     dllNativeStruct->gcMark = gcMarkDll;
     dllNativeStruct->index = indexDll;
     struct dll* dll = PICCOLO_GET_PAYLOAD(dllNativeStruct, struct dll);
