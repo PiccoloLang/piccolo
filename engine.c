@@ -725,12 +725,12 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_GET_LEN: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
                 if(PICCOLO_IS_STRING(val)) {
-                    struct piccolo_ObjString* str = PICCOLO_AS_OBJ(val);
+                    struct piccolo_ObjString* str = (struct piccolo_ObjString*) PICCOLO_AS_OBJ(val);
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(str->utf8Len));
                     break;
                 }
                 if(PICCOLO_IS_ARRAY(val)) {
-                    struct piccolo_ObjArray* arr = PICCOLO_AS_OBJ(val);
+                    struct piccolo_ObjArray* arr = (struct piccolo_ObjArray*) PICCOLO_AS_OBJ(val);
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(arr->array.count));
                     break;
                 }
@@ -810,6 +810,10 @@ static bool run(struct piccolo_Engine* engine) {
                         break;
                     }
                     case PICCOLO_OBJ_PACKAGE: {
+                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
+                        break;
+                    }
+                    case PICCOLO_OBJ_NATIVE_STRUCT: {
                         piccolo_runtimeError(engine, "Invalid operand to iterator.");
                         break;
                     }
