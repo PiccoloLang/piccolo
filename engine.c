@@ -730,7 +730,7 @@ static bool run(struct piccolo_Engine* engine) {
                     break;
                 }
                 if(PICCOLO_IS_ARRAY(val)) {
-                    struct piccolo_ObjArray* arr = (struct piccolo_ObjArray*)PICCOLO_AS_OBJ(val);
+                    struct piccolo_ObjArray* arr = (struct piccolo_ObjArray*) PICCOLO_AS_OBJ(val);
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(arr->array.count));
                     break;
                 }
