@@ -109,7 +109,7 @@ struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjT
 struct piccolo_ObjNativeStruct* piccolo_allocNativeStruct(struct piccolo_Engine* engine, size_t size, const char* name);
 
 #define PICCOLO_ALLOCATE_NATIVE_STRUCT(engine, type, name) ((struct piccolo_Obj*)piccolo_allocNativeStruct(engine, sizeof(type), name))
-#define PICCOLO_GET_PAYLOAD(obj, type) ((type*)((void*)obj + sizeof(struct piccolo_ObjNativeStruct)))
+#define PICCOLO_GET_PAYLOAD(obj, type) ((type*)((uint8_t*)obj + sizeof(struct piccolo_ObjNativeStruct)))
 
 void piccolo_freeObj(struct piccolo_Engine* engine, struct piccolo_Obj* obj);
 

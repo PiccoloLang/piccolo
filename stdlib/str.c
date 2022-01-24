@@ -4,6 +4,9 @@
 #include "../util/memory.h"
 #include "../util/strutil.h"
 
+#include <stdio.h>
+#include <string.h>
+
 static piccolo_Value getCodeNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
     if(argc != 1) {
         piccolo_runtimeError(engine, "Wrong argument count.");
@@ -36,8 +39,24 @@ static piccolo_Value getCodeNative(struct piccolo_Engine* engine, int argc, picc
     return PICCOLO_NUM_VAL(code);
 }
 
+static piccolo_Value numToStrNative(struct piccolo_Engine* engine, int argc, piccolo_Value* argv, piccolo_Value self) {
+    if(argc != 1) {
+        piccolo_runtimeError(engine, "Wrong argument count.");
+        return PICCOLO_NIL_VAL();
+    }
+    piccolo_Value val = argv[0];
+    if(!PICCOLO_IS_NUM(val)) {
+        piccolo_runtimeError(engine, "Argument must be a number.");
+        return PICCOLO_NIL_VAL();
+    }
+    char buf[32];
+    sprintf(buf, "%g", PICCOLO_AS_NUM(val));
+    return PICCOLO_OBJ_VAL(piccolo_copyString(engine, buf, strlen(buf)));
+}
+
 void piccolo_addStrLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* str = piccolo_createPackage(engine);
     str->packageName = "str";
     piccolo_defineGlobal(engine, str, "utfCode", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, getCodeNative)));
+    piccolo_defineGlobal(engine, str, "numToStr", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, numToStrNative)));
 }

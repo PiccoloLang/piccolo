@@ -75,7 +75,7 @@ static piccolo_Value indexFile(void* payload, struct piccolo_Engine* engine, pic
         piccolo_runtimeError(engine, "Property must be a string.");
         return PICCOLO_NIL_VAL();
     }
-    struct piccolo_ObjString* keyStr = PICCOLO_AS_OBJ(key);
+    struct piccolo_ObjString* keyStr = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(key);
     if(strcmp(keyStr->string, "path") == 0) {
         if(set) {
             piccolo_runtimeError(engine, "Cannot set path.");
@@ -135,7 +135,7 @@ static piccolo_Value fileWriteNative(struct piccolo_Engine* engine, int argc, pi
         return PICCOLO_NIL_VAL();
     }
     struct file* file = PICCOLO_GET_PAYLOAD(PICCOLO_AS_OBJ(self), struct file);
-    struct piccolo_ObjString* str = PICCOLO_AS_OBJ(data);
+    struct piccolo_ObjString* str = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(data);
     fprintf(file->file, "%s", str->string);
     return PICCOLO_NIL_VAL();
 }
@@ -216,7 +216,7 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
         piccolo_runtimeError(engine, "Could not open file.");
         return PICCOLO_NIL_VAL();
     }
-    struct piccolo_ObjNativeStruct* fileObj = PICCOLO_ALLOCATE_NATIVE_STRUCT(engine, struct file, "file");
+    struct piccolo_ObjNativeStruct* fileObj = (struct piccolo_ObjNativeStruct*)PICCOLO_ALLOCATE_NATIVE_STRUCT(engine, struct file, "file");
     fileObj->gcMark = gcMarkFile;
     fileObj->index = indexFile;
     struct file* payload = PICCOLO_GET_PAYLOAD(fileObj, struct file);

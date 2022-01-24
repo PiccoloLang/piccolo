@@ -12,7 +12,7 @@ void* piccolo_reallocate(struct piccolo_Engine* engine, void* data, size_t oldSi
         return NULL;
     }
     void* const retval = realloc(data, newSize);
-    memset(retval + oldSize, 0, newSize - oldSize);
+    memset((uint8_t*)retval + oldSize, 0, newSize - oldSize);
     return retval;
 }
 

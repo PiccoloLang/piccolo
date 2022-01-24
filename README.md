@@ -7,5 +7,5 @@ A fun, easy to embed high-level programming language.
 
 ### Credits
 
-Main programming - Nikos Plugachev<br>
+Main programming - Nikos Plugachev, Emily Banerjee<br>
 Logo Design - Oliver Huang

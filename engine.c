@@ -725,12 +725,12 @@ static bool run(struct piccolo_Engine* engine) {
             case PICCOLO_OP_GET_LEN: {
                 piccolo_Value val = piccolo_enginePopStack(engine);
                 if(PICCOLO_IS_STRING(val)) {
-                    struct piccolo_ObjString* str = PICCOLO_AS_OBJ(val);
+                    struct piccolo_ObjString* str = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(val);
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(str->utf8Len));
                     break;
                 }
                 if(PICCOLO_IS_ARRAY(val)) {
-                    struct piccolo_ObjArray* arr = PICCOLO_AS_OBJ(val);
+                    struct piccolo_ObjArray* arr = (struct piccolo_ObjArray*)PICCOLO_AS_OBJ(val);
                     piccolo_enginePushStack(engine, PICCOLO_NUM_VAL(arr->array.count));
                     break;
                 }
@@ -779,7 +779,7 @@ static bool run(struct piccolo_Engine* engine) {
                 piccolo_Value container = piccolo_enginePopStack(engine);
                 struct piccolo_Obj* containerObj = PICCOLO_AS_OBJ(container);
                 int idx = PICCOLO_AS_NUM(iterator);
-                bool last;
+                bool last = false;
                 switch(containerObj->type) {
                     case PICCOLO_OBJ_ARRAY: {
                         last = idx >= ((struct piccolo_ObjArray*)containerObj)->array.count;
@@ -793,23 +793,12 @@ static bool run(struct piccolo_Engine* engine) {
                         last = idx >= ((struct piccolo_ObjHashmap*)containerObj)->hashmap.capacity;
                         break;
                     }
-                    case PICCOLO_OBJ_FUNC: {
-                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
-                        break;
-                    }
-                    case PICCOLO_OBJ_UPVAL: {
-                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
-                        break;
-                    }
-                    case PICCOLO_OBJ_CLOSURE: {
-                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
-                        break;
-                    }
-                    case PICCOLO_OBJ_NATIVE_FN: {
-                        piccolo_runtimeError(engine, "Invalid operand to iterator.");
-                        break;
-                    }
-                    case PICCOLO_OBJ_PACKAGE: {
+                    case PICCOLO_OBJ_FUNC:
+                    case PICCOLO_OBJ_UPVAL:
+                    case PICCOLO_OBJ_CLOSURE:
+                    case PICCOLO_OBJ_NATIVE_FN:
+                    case PICCOLO_OBJ_PACKAGE:
+                    case PICCOLO_OBJ_NATIVE_STRUCT: {
                         piccolo_runtimeError(engine, "Invalid operand to iterator.");
                         break;
                     }

@@ -16,7 +16,7 @@ static piccolo_Value shellNative(struct piccolo_Engine* engine, int argc, piccol
         piccolo_runtimeError(engine, "Command must be a string.");
         return PICCOLO_NIL_VAL();
     }
-    struct piccolo_ObjString* cmd = PICCOLO_AS_OBJ(cmdVal);
+    struct piccolo_ObjString* cmd = (struct piccolo_ObjString*)PICCOLO_AS_OBJ(cmdVal);
     system(cmd->string);
     return PICCOLO_NIL_VAL();
 }
