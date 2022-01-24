@@ -1086,7 +1086,7 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     piccolo_freeParser(engine, &parser);
 
     piccolo_writeBytecode(engine, &package->bytecode, PICCOLO_OP_RETURN, 0);
-    piccolo_disassembleBytecode(&package->bytecode);
+    // piccolo_disassembleBytecode(&package->bytecode);
 
     package->compiled = true;
 
