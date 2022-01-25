@@ -3,6 +3,7 @@
 #include "../util/memory.h"
 #include "picStdlib.h"
 #include "../gc.h"
+#include "../util/file.h"
 #include <stdlib.h>
 #include <stdio.h>
 #ifdef _WIN32
@@ -121,14 +122,34 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
 #ifdef _WIN32
     dll->library = LoadLibrary(path);
     if(dll->handle == NULL) {
-        piccolo_runtimeError(engine, "Could not open DLL.");
-        return PICCOLO_NIL_VAL();
+        size_t pathLen = strlen(path);
+        char buf[4096];
+        for(int i = 0; i < engine->searchPaths.count; i++) {
+            piccolo_applyRelativePathToFilePath(buf, path, pathLen, engine->searchPaths.values[i]);
+            dll->handle = LoadLibrary(buf);
+            if(dll->handle != NULL)
+                break;
+        }
+        if(dll->handle == NULL) {
+            piccolo_runtimeError(engine, "Could not open DLL.");
+            return PICCOLO_NIL_VAL();
+        }
     }
 #else
     dll->handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
     if(dll->handle == NULL) {
-        piccolo_runtimeError(engine, "Could not open DLL.");
-        return PICCOLO_NIL_VAL();
+        size_t pathLen = strlen(path);
+        char buf[4096];
+        for(int i = 0; i < engine->searchPaths.count; i++) {
+            piccolo_applyRelativePathToFilePath(buf, path, pathLen, engine->searchPaths.values[i]);
+            dll->handle = dlopen(buf, RTLD_LAZY | RTLD_GLOBAL);
+            if(dll->handle != NULL)
+                break;
+        }
+        if(dll->handle == NULL) {
+            piccolo_runtimeError(engine, "Could not open DLL.");
+            return PICCOLO_NIL_VAL();
+        }
     }
 #endif
     dll->close = PICCOLO_OBJ_VAL(piccolo_makeBoundNative(engine, dllCloseNative, PICCOLO_OBJ_VAL(dllNativeStruct)));
@@ -140,4 +161,13 @@ void piccolo_addDLLLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* dll = piccolo_createPackage(engine);
     dll->packageName = "dll";
     piccolo_defineGlobal(engine, dll, "open", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, openNative)));
+    #ifdef __APPLE__
+    piccolo_defineGlobal(engine, dll, "extension", PICCOLO_OBJ_VAL(piccolo_copyString(engine, "dylib", 5)));
+    #endif
+    #ifdef _WIN32
+    piccolo_defineGlobal(engine, dll, "extension", PICCOLO_OBJ_VAL(piccolo_copyString(engine, "dll", 3)));
+    #endif
+    #ifdef __linux__
+    piccolo_defineGlobal(engine, dll, "extension", PICCOLO_OBJ_VAL(piccolo_copyString(engine, "so", 2)));
+    #endif
 }
