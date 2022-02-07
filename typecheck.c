@@ -11,6 +11,7 @@
 PICCOLO_DYNARRAY_IMPL(struct piccolo_Type*, Type)
 
 void piccolo_getTypename(struct piccolo_Type* type, char* dest) {
+    char* originalDest = dest;
     if(type == NULL) {
         sprintf(dest, "NULL");
         return;
@@ -39,7 +40,7 @@ void piccolo_getTypename(struct piccolo_Type* type, char* dest) {
         case PICCOLO_TYPE_ARRAY: {
             char buf[256];
             piccolo_getTypename(type->subtypes.listElem, buf);
-            sprintf(dest, "[%s]", buf);
+            snprintf(dest, 256, "[%s]", buf);
             break;
         }
         case PICCOLO_TYPE_HASHMAP: {
@@ -47,20 +48,26 @@ void piccolo_getTypename(struct piccolo_Type* type, char* dest) {
             piccolo_getTypename(type->subtypes.hashmap.key, keyBuf);
             char valBuf[256];
             piccolo_getTypename(type->subtypes.hashmap.val, valBuf);
-            sprintf(dest, "{%s : %s}", keyBuf, valBuf);
+            snprintf(dest, 256, "{%s : %s}", keyBuf, valBuf);
             break;
         }
         case PICCOLO_TYPE_FN: {
             dest += sprintf(dest, "fn ");
+            size_t sizeLeft = 256 - 3;
+            size_t taken;
             for(int i = 0; i < type->subtypes.fn.params.count; i++) {
                 char buf[256];
                 piccolo_getTypename(type->subtypes.fn.params.values[i], buf);
-                dest += sprintf(dest, i == 0 ? "%s" : ", %s", buf);
+                taken = snprintf(dest, sizeLeft, i == 0 ? "%s" : ", %s", buf);
+                dest += taken;
+                sizeLeft -= taken;
             }
-            dest += sprintf(dest, type->subtypes.fn.params.count == 0 ? "-> " : " -> ");
+            taken = snprintf(dest, sizeLeft, type->subtypes.fn.params.count == 0 ? "-> " : " -> ");
+            dest += taken;
+            sizeLeft -= taken;
             char buf[256];
             piccolo_getTypename(type->subtypes.fn.result, buf);
-            dest += sprintf(dest, "%s", buf);
+            dest += snprintf(dest, sizeLeft, "%s", buf);
             break;
         }
         case PICCOLO_TYPE_PKG: {
@@ -68,14 +75,22 @@ void piccolo_getTypename(struct piccolo_Type* type, char* dest) {
             break;
         }
         case PICCOLO_TYPE_UNION: {
+            size_t sizeLeft = 256;
             for(int i = 0; i < type->subtypes.unionTypes.types.count; i++) {
                 char buf[256];
                 piccolo_getTypename(type->subtypes.unionTypes.types.values[i], buf);
-                dest += sprintf(dest, i == 0 ? "%s" : " | %s", buf);
+                size_t taken = snprintf(dest, sizeLeft, i == 0 ? "%s" : " | %s", buf);
+                dest += taken;
+                sizeLeft -= taken;
             }
             break;
         }
     }
+    dest = originalDest;
+    dest[252] = '.';
+    dest[253] = '.';
+    dest[254] = '.';
+    dest[255] = '\0';
 }
 
 void piccolo_freeType(struct piccolo_Engine* engine, struct piccolo_Type* type) {
