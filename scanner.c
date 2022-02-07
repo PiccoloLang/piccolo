@@ -30,7 +30,7 @@ static bool alphanumeric(char c) {
 
 static enum piccolo_TokenType getKeyword(const char* start, const char* end) {
     #define TOKEN_TYPE(token, keyword)                                                        \
-        if(end - start < sizeof keyword && memcmp(start, keyword, (sizeof keyword) - 1) == 0) \
+        if(end - start == strlen(keyword) && memcmp(start, keyword, strlen(keyword)) == 0) \
             return PICCOLO_TOKEN_ ## token;
     #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

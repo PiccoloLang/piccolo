@@ -1,5 +1,6 @@
 
 #include "embedding.h"
+#include "typecheck.h"
 
 #include <string.h>
 
@@ -16,6 +17,7 @@ void piccolo_defineGlobalWithNameSize(struct piccolo_Engine* engine, struct picc
     struct piccolo_ObjString* varName = piccolo_copyString(engine, name, nameLen);
     piccolo_setGlobalTable(engine, &package->globalIdxs, varName, package->globals.count);
     piccolo_writeValueArray(engine, &package->globals, value);
+    piccolo_writeTypeArray(engine, &package->types, piccolo_simpleType(engine, PICCOLO_TYPE_ANY));
 }
 
 void piccolo_defineGlobal(struct piccolo_Engine* engine, struct piccolo_Package* package, const char* name, struct piccolo_Value value) {
@@ -26,7 +28,7 @@ piccolo_Value piccolo_getGlobalWithNameSize(struct piccolo_Engine* engine, struc
     struct piccolo_ObjString* varName = piccolo_copyString(engine, name, nameLen);
     int idx = piccolo_getGlobalTable(engine, &package->globalIdxs, varName);
     if(idx == -1) {
-        return PICCOLO_NIL_VAL(); // TODO: There needs to be some way to dilliate actual nil from errors
+        return PICCOLO_NIL_VAL(); // TODO: There needs to be some way to dilliniate actual nil from errors
     }
     return package->globals.values[idx];
 }

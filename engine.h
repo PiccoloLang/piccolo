@@ -4,6 +4,7 @@
 
 #include "package.h"
 #include "object.h"
+#include "typecheck.h"
 #include <stdarg.h>
 #include <stdbool.h>
 
@@ -38,6 +39,7 @@ struct piccolo_Engine {
     struct piccolo_ObjUpval* openUpvals;
 
     struct piccolo_StringArray searchPaths;
+    struct piccolo_Type* types;
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     struct piccolo_MemoryTrack* track;
 #endif

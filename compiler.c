@@ -3,6 +3,7 @@
 #include "package.h"
 #include "parser.h"
 #include "bytecode.h"
+#include "typecheck.h"
 
 #include "debug/expr.h"
 
@@ -30,7 +31,12 @@ static void initCompiler(struct piccolo_Compiler* compiler, struct piccolo_Packa
     piccolo_initUpvalueArray(&compiler->upvals);
 }
 
-static void compilationError(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, int charIdx, const char* format, ...) {
+static void freeCompiler(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler) {
+    piccolo_freeVariableArray(engine, &compiler->locals);
+    piccolo_freeUpvalueArray(engine, &compiler->upvals);
+}
+
+void piccolo_compilationError(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, int charIdx, const char* format, ...) {
     va_list args;
     va_start(args, format);
     engine->printError(format, args);
@@ -86,6 +92,7 @@ static int resolveUpvalue(struct piccolo_Engine* engine, struct piccolo_Compiler
         upval.slot = slot;
         upval.local = false;
         upval.Mutable = compiler->enclosing->upvals.values[slot].Mutable;
+        upval.type = compiler->enclosing->upvals.values[slot].type;
         piccolo_writeUpvalueArray(engine, &compiler->upvals, upval);
         return result;
     }
@@ -100,6 +107,7 @@ static int resolveUpvalue(struct piccolo_Engine* engine, struct piccolo_Compiler
     upval.slot = enclosingSlot;
     upval.local = true;
     upval.Mutable = compiler->enclosing->locals.values[enclosingSlot].Mutable;
+    upval.type = compiler->enclosing->locals.values[enclosingSlot].type;
     piccolo_writeUpvalueArray(engine, &compiler->upvals, upval);
 
     return slot;
@@ -111,10 +119,11 @@ static struct piccolo_Variable createVar(struct piccolo_Token name, int slot) {
     var.nameLen = name.length;
     var.slot = slot;
     var.Mutable = true;
+    var.type = NULL;
     return var;
 }
 
-static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* sourceFilepath, const char* name, size_t nameLen) {
+struct piccolo_Package* piccolo_resolvePackage(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* sourceFilepath, const char* name, size_t nameLen) {
     for(int i = 0; i < engine->packages.count; i++) {
         if(memcmp(engine->packages.values[i]->packageName, name, nameLen) == 0) {
             return engine->packages.values[i];
@@ -129,7 +138,6 @@ static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, str
         }
     }
 
-    // readFile returns a heap buffer - this shouldn't be marked const
     char* source = piccolo_readFile(path);
     if(source == NULL) {
         for(int i = 0; i < engine->searchPaths.count; i++) {
@@ -160,17 +168,11 @@ static struct piccolo_Package* resolvePackage(struct piccolo_Engine* engine, str
     return package;
 }
 
-struct variableData {
-    int slot;
-    enum piccolo_OpCode setOp;
-    enum piccolo_OpCode getOp;
-    bool mutable;
-};
-
-static struct variableData getVariable(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Token name) {
+struct piccolo_VarData piccolo_getVariable(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Token name) {
     int globalSlot = getGlobalSlot(compiler, name);
 
-    struct variableData result;
+    struct piccolo_VarData result;
+    result.type = NULL;
     if(globalSlot == -1) {
         int localSlot = getLocalSlot(compiler, name);
         if(localSlot == -1) {
@@ -182,18 +184,22 @@ static struct variableData getVariable(struct piccolo_Engine* engine, struct pic
                 result.setOp = PICCOLO_OP_SET_UPVAL;
                 result.getOp = PICCOLO_OP_GET_UPVAL;
                 result.mutable = compiler->upvals.values[upvalueSlot].Mutable;
+                result.type = compiler->upvals.values[upvalueSlot].type;
+                result.type = NULL;
             }
         } else {
             result.slot = localSlot;
             result.getOp = PICCOLO_OP_GET_LOCAL;
             result.setOp = PICCOLO_OP_SET_LOCAL;
             result.mutable = compiler->locals.values[localSlot].Mutable;
+            result.type = compiler->locals.values[localSlot].type;
         }
     } else {
         result.slot = globalSlot;
         result.getOp = PICCOLO_OP_GET_GLOBAL;
         result.setOp = PICCOLO_OP_SET_GLOBAL;
         result.mutable = compiler->globals->values[globalSlot].Mutable;
+        result.type = compiler->globals->values[globalSlot].type;
     }
 
     return result;
@@ -411,10 +417,15 @@ static void findGlobals(struct piccolo_Engine* engine, struct piccolo_Compiler* 
             case PICCOLO_EXPR_VAR_DECL: {
                 struct piccolo_VarDeclNode* varDecl = (struct piccolo_VarDeclNode*)curr;
                 if(getGlobalSlot(compiler, varDecl->name) != -1) {
-                    compilationError(engine, compiler, varDecl->name.charIdx, "Variable '%.*s' already defined.", varDecl->name.length, varDecl->name.start);
+                    piccolo_compilationError(engine, compiler, varDecl->name.charIdx, "Variable '%.*s' already defined.", varDecl->name.length, varDecl->name.start);
                 } else {
                     struct piccolo_Variable var = createVar(varDecl->name, compiler->globals->count);
                     var.Mutable = varDecl->mutable;
+                    if(varDecl->typed) {
+                        var.type = piccolo_getType(engine, compiler, varDecl->value);
+                    } else {
+                        var.type = NULL;
+                    }
                     piccolo_writeVariableArray(engine, compiler->globals, var);
                 }
                 findGlobals(engine, compiler, varDecl->value);
@@ -502,9 +513,9 @@ static void compileLiteral(struct piccolo_LiteralNode* literal, COMPILE_PARAMS) 
 }
 
 static void compileVar(struct piccolo_VarNode* var, COMPILE_PARAMS) {
-    struct variableData varData = getVariable(engine, compiler, var->name);
+    struct piccolo_VarData varData = piccolo_getVariable(engine, compiler, var->name);
     if(varData.slot == -1) {
-        compilationError(engine, compiler, var->name.charIdx, "Variable '%.*s' is not defined.", var->name.length, var->name.start);
+        piccolo_compilationError(engine, compiler, var->name.charIdx, "Variable '%.*s' is not defined.", var->name.length, var->name.start);
         return;
     }
     if(!var->expr.reqEval)
@@ -557,7 +568,8 @@ static void compileSubscript(struct piccolo_SubscriptNode* subscript, COMPILE_PA
 static void compileIndex(struct piccolo_IndexNode* index, COMPILE_PARAMS) {
     compileExpr(index->target, COMPILE_ARGS);
     compileExpr(index->index, COMPILE_ARGS);
-    piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_IDX, index->charIdx);
+    if(index->expr.reqEval)
+        piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_GET_IDX, index->charIdx);
 }
 
 static void compileUnary(struct piccolo_UnaryNode* unary, COMPILE_PARAMS) {
@@ -692,12 +704,12 @@ static void compileFnLiteral(struct piccolo_FnLiteralNode* fnLiteral, COMPILE_PA
     initCompiler(&fnCompiler, compiler->package, compiler->globals);
     fnCompiler.enclosing = compiler;
     for(int i = 0; i < fnLiteral->params.count; i++) {
-        struct variableData varData = getVariable(engine, compiler, fnLiteral->params.values[i]);
+        struct piccolo_VarData varData = piccolo_getVariable(engine, compiler, fnLiteral->params.values[i]);
         if(varData.slot == -1) {
             struct piccolo_Variable var = createVar(fnLiteral->params.values[i], fnCompiler.locals.count);
             piccolo_writeVariableArray(engine, &fnCompiler.locals, var);
         } else {
-            compilationError(engine, compiler, fnLiteral->params.values[i].charIdx, "Variable '%.*s' already defined.", fnLiteral->params.values[i].length, fnLiteral->params.values[i].start);
+            piccolo_compilationError(engine, compiler, fnLiteral->params.values[i].charIdx, "Variable '%.*s' already defined.", fnLiteral->params.values[i].length, fnLiteral->params.values[i].start);
         }
     }
     struct piccolo_ObjFunction* function = piccolo_newFunction(engine);
@@ -717,20 +729,25 @@ static void compileFnLiteral(struct piccolo_FnLiteralNode* fnLiteral, COMPILE_PA
             piccolo_writeBytecode(engine, bytecode, fnCompiler.upvals.values[i].local, 0);
         }
     }
-
+    freeCompiler(engine, &fnCompiler);
     compiler->hadError |= fnCompiler.hadError;
 }
 
 static void compileVarDecl(struct piccolo_VarDeclNode* varDecl, COMPILE_PARAMS) {
     compileExpr(varDecl->value, COMPILE_ARGS);
     if(local) { // Act locally
-        struct variableData varData = getVariable(engine, compiler, varDecl->name);
+        struct piccolo_VarData varData = piccolo_getVariable(engine, compiler, varDecl->name);
         if(varData.slot != -1) {
-            compilationError(engine, compiler, varDecl->name.charIdx, "Variable '%.*s' already defined.", varDecl->name.length, varDecl->name.start);
+            piccolo_compilationError(engine, compiler, varDecl->name.charIdx, "Variable '%.*s' already defined.", varDecl->name.length, varDecl->name.start);
         } else {
             int slot = compiler->locals.count;
             struct piccolo_Variable var = createVar(varDecl->name, slot);
             var.Mutable = varDecl->mutable;
+            if(varDecl->typed) {
+                var.type = piccolo_getType(engine, compiler, varDecl->value);
+            } else {
+                var.type = NULL;
+            }
             piccolo_writeVariableArray(engine, &compiler->locals, var);
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_PUSH_LOCAL, 0);
         }
@@ -743,13 +760,13 @@ static void compileVarDecl(struct piccolo_VarDeclNode* varDecl, COMPILE_PARAMS) 
 }
 
 static void compileVarSet(struct piccolo_VarSetNode* varSet, COMPILE_PARAMS) {
-    struct variableData varData = getVariable(engine, compiler, varSet->name);
+    struct piccolo_VarData varData = piccolo_getVariable(engine, compiler, varSet->name);
     compileExpr(varSet->value, COMPILE_ARGS);
     if(varData.slot == -1) {
-        compilationError(engine, compiler, varSet->name.charIdx, "Variable '%.*s' is not defined.", varSet->name.length, varSet->name.start);
+        piccolo_compilationError(engine, compiler, varSet->name.charIdx, "Variable '%.*s' is not defined.", varSet->name.length, varSet->name.start);
     } else {
         if(!varData.mutable) {
-            compilationError(engine, compiler, varSet->name.charIdx, "Cannot modify immutable variable.");
+            piccolo_compilationError(engine, compiler, varSet->name.charIdx, "Cannot modify immutable variable.");
             return;
         }
         piccolo_writeParameteredBytecode(engine, bytecode, varData.setOp, varData.slot, varSet->name.charIdx);
@@ -860,10 +877,10 @@ static void compileFor(struct piccolo_ForNode* forNode, COMPILE_PARAMS) {
 
     */
 
-    struct variableData varData = getVariable(engine, compiler, forNode->name);
+    struct piccolo_VarData varData = piccolo_getVariable(engine, compiler, forNode->name);
     int slot = -1;
     if(varData.slot != -1) {
-        compilationError(engine, compiler, forNode->name.charIdx, "Variable %.*s is already defined", forNode->name.length, forNode->name.start);
+        piccolo_compilationError(engine, compiler, forNode->name.charIdx, "Variable %.*s is already defined", forNode->name.length, forNode->name.start);
     } else {
         slot = compiler->locals.count;
         struct piccolo_Variable var = createVar(forNode->name, slot);
@@ -947,15 +964,16 @@ static void compileCall(struct piccolo_CallNode* call, COMPILE_PARAMS) {
 static void compileImport(struct piccolo_ImportNode* import, COMPILE_PARAMS) {
     size_t packageLen = import->packageName.length - 2;
     char* packageName = strndup(import->packageName.start + 1, packageLen);
-    struct piccolo_Package *package = resolvePackage(engine, compiler, compiler->package->packageName, packageName, packageLen);
+    struct piccolo_Package* package = piccolo_resolvePackage(engine, compiler, compiler->package->packageName, packageName, packageLen);
     if(package == NULL) {
-        compilationError(engine, compiler, import->packageName.charIdx, "Package %.*s does not exist.", import->packageName.length, import->packageName.start);
+        piccolo_compilationError(engine, compiler, import->packageName.charIdx, "Package %.*s does not exist.", import->packageName.length, import->packageName.start);
     } else {
         piccolo_writeConst(engine, bytecode, PICCOLO_OBJ_VAL(package), import->packageName.charIdx);
         piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_EXECUTE_PACKAGE, import->packageName.charIdx);
         if(!import->expr.reqEval)
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, import->packageName.charIdx);
     }
+    import->package = package;
     free(packageName);
 }
 
@@ -1043,6 +1061,7 @@ static void compileExpr(struct piccolo_ExprNode* expr, COMPILE_PARAMS) {
             break;
         }
     }
+    piccolo_getType(engine, compiler, expr);
 }
 
 bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
@@ -1074,7 +1093,10 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
     for(int i = 0; i < globals.count; i++) {
         struct piccolo_ObjString* name = piccolo_copyString(engine, globals.values[i].nameStart, globals.values[i].nameLen);
         piccolo_setGlobalTable(engine, &package->globalIdxs, name, globals.values[i].slot | (PICCOLO_GLOBAL_SLOT_MUTABLE_BIT * globals.values[i].Mutable));
+        piccolo_writeTypeArray(engine, &package->types, globals.values[i].type);
     }
+ 
+    currExpr = ast;
 
     currExpr = ast;
     while(currExpr != NULL) {
@@ -1082,8 +1104,11 @@ bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Packag
         currExpr = currExpr->nextExpr;
     }
 
-//    piccolo_printExpr(ast, 0);
+    // piccolo_printExpr(ast, 0);
+
     piccolo_freeParser(engine, &parser);
+    piccolo_freeVariableArray(engine, &globals);
+    freeCompiler(engine, &compiler);
 
     piccolo_writeBytecode(engine, &package->bytecode, PICCOLO_OP_RETURN, 0);
     // piccolo_disassembleBytecode(&package->bytecode);

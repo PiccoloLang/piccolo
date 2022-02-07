@@ -7,6 +7,7 @@
 #include "util/hashmap.h"
 #include "object.h"
 #include "bytecode.h"
+#include "typecheck.h"
 
 PICCOLO_HASHMAP_HEADER(struct piccolo_ObjString*, int, GlobalTable)
 #define PICCOLO_GLOBAL_SLOT_MUTABLE_BIT (1 << 14)
@@ -16,6 +17,7 @@ struct piccolo_Package {
     struct piccolo_Bytecode bytecode;
     char* source;
     struct piccolo_ValueArray globals;
+    struct piccolo_TypeArray types;
     struct piccolo_GlobalTable globalIdxs;
     const char* packageName;
     bool compiled, executed, compilationError;

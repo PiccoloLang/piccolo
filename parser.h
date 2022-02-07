@@ -41,6 +41,7 @@ struct piccolo_ExprNode {
     struct piccolo_ExprNode* nextExpr;
     enum piccolo_ExprNodeType type;
     bool reqEval;
+    struct piccolo_Type* resultType;
 };
 
 struct piccolo_LiteralNode {
@@ -117,6 +118,7 @@ struct piccolo_VarDeclNode {
     struct piccolo_ExprNode expr;
     struct piccolo_Token name;
     struct piccolo_ExprNode* value;
+    bool typed;
     bool mutable;
 };
 
@@ -175,6 +177,7 @@ struct piccolo_CallNode {
 struct piccolo_ImportNode {
     struct piccolo_ExprNode expr;
     struct piccolo_Token packageName;
+    struct piccolo_Package* package;
 };
 
 struct piccolo_Parser {

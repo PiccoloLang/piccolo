@@ -93,7 +93,7 @@ char* piccolo_getTypeName(piccolo_Value value) {
         return "nil";
     }
     if(PICCOLO_IS_NUM(value)) {
-        return "number";
+        return "num";
     }
     if(PICCOLO_IS_BOOL(value)) {
         return "bool";
@@ -101,7 +101,7 @@ char* piccolo_getTypeName(piccolo_Value value) {
     if(PICCOLO_IS_OBJ(value)) {
         enum piccolo_ObjType type = PICCOLO_AS_OBJ(value)->type;
         if(type == PICCOLO_OBJ_STRING)
-            return "string";
+            return "str";
         if(type == PICCOLO_OBJ_ARRAY)
             return "array";
         if(type == PICCOLO_OBJ_HASHMAP)

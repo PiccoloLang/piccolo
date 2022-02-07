@@ -26,6 +26,7 @@ PICCOLO_HASHMAP_IMPL(struct piccolo_ObjString*, int, GlobalTable, NULL, -1)
 
 static void initPackage(struct piccolo_Engine* engine, struct piccolo_Package* package) {
     piccolo_initValueArray(&package->globals);
+    piccolo_initTypeArray(&package->types);
     piccolo_initGlobalTable(&package->globalIdxs);
     piccolo_initBytecode(&package->bytecode);
     package->compiled = false;

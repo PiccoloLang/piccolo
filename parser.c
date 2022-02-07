@@ -14,6 +14,7 @@ static struct piccolo_ExprNode* createNode(struct piccolo_Parser* parser, size_t
     node->nextExpr = NULL;
     node->type = type;
     node->reqEval = false;
+    node->resultType = NULL;
     parser->nodes = node;
     return node;
 }
@@ -330,10 +331,12 @@ static struct piccolo_ExprNode* parseImport(PARSER_PARAMS) {
             struct piccolo_Token packageName = parser->currToken;
             struct piccolo_ImportNode* import = ALLOCATE_NODE(parser, Import, PICCOLO_EXPR_IMPORT);
             import->packageName = packageName;
+            import->package = NULL;
             advanceParser(engine, parser);
             if(parser->currToken.type == PICCOLO_TOKEN_AS) {
                 advanceParser(engine, parser);
                 struct piccolo_VarDeclNode* importAs = ALLOCATE_NODE(parser, VarDecl, PICCOLO_EXPR_VAR_DECL);
+                importAs->typed = true;
                 importAs->name = parser->currToken;
                 if(parser->currToken.type != PICCOLO_TOKEN_IDENTIFIER) {
                     parsingError(engine, parser, "Expected identifier.");
@@ -644,6 +647,13 @@ static struct piccolo_ExprNode* parseVarDecl(PARSER_PARAMS) {
             advanceParser(engine, parser);
         } else {
             parsingError(engine, parser, "Expected variable name.");
+        }
+
+        if(parser->currToken.type == PICCOLO_TOKEN_COLON) {
+            varDecl->typed = true;
+            advanceParser(engine, parser);
+        } else {
+            varDecl->typed = false;
         }
 
         if(parser->currToken.type == PICCOLO_TOKEN_EQ) {

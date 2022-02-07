@@ -32,6 +32,7 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     engine->liveMemory = 0;
     engine->gcThreshold = 1024 * 64;
     engine->objs = NULL;
+    engine->types = NULL;
     piccolo_initPackageArray(&engine->packages);
     piccolo_initCallFrameArray(&engine->callFrames);
     piccolo_initStringArray(&engine->searchPaths);
@@ -57,6 +58,14 @@ void piccolo_freeEngine(struct piccolo_Engine* engine) {
     piccolo_freeValueArray(engine, &engine->locals);
     piccolo_freeCallFrameArray(engine, &engine->callFrames);
     piccolo_freeStringArray(engine, &engine->searchPaths);
+
+    struct piccolo_Type* currType = engine->types;
+    while(currType != NULL) {
+        struct piccolo_Type* next = currType->next;
+        piccolo_freeType(engine, currType);
+        PICCOLO_REALLOCATE("free type", engine, currType, sizeof(struct piccolo_Type), 0);
+        currType = next;
+    }
 }
 
 

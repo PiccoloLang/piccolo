@@ -6,6 +6,8 @@
 
 #include "scanner.h"
 #include "util/dynarray.h"
+#include "typecheck.h"
+#include "bytecode.h"
 
 // Maximum length of a package name
 #define PICCOLO_MAX_PACKAGE 4096
@@ -18,12 +20,22 @@ struct piccolo_Variable {
     const char* nameStart;
     size_t nameLen;
     bool Mutable;
+    struct piccolo_Type* type;
 };
 
 struct piccolo_Upvalue {
     int slot;
     bool local;
     bool Mutable;
+    struct piccolo_Type* type;
+};
+
+struct piccolo_VarData {
+    int slot;
+    enum piccolo_OpCode setOp;
+    enum piccolo_OpCode getOp;
+    bool mutable;
+    struct piccolo_Type* type;
 };
 
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Variable, Variable)
@@ -38,6 +50,10 @@ struct piccolo_Compiler {
     bool hadError;
 };
 
+struct piccolo_Package* piccolo_resolvePackage(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* sourceFilepath, const char* name, size_t nameLen);
+
+void piccolo_compilationError(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, int charIdx, const char* format, ...);
+struct piccolo_VarData piccolo_getVariable(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Token name);
 bool piccolo_compilePackage(struct piccolo_Engine* engine, struct piccolo_Package* package);
 
 #endif

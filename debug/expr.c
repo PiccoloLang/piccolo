@@ -1,5 +1,6 @@
 
 #include "expr.h"
+#include "../typecheck.h"
 
 #include <stdio.h>
 
@@ -7,30 +8,33 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
     if(expr == NULL)
         return;
 
+    char typeBuf[256];
+    piccolo_getTypename(expr->resultType, typeBuf);
+
     printf(expr->reqEval ? "[X] " : "[ ] ");
     for(int i = 0; i < offset; i++)
         printf("    ");
     switch(expr->type) {
         case PICCOLO_EXPR_LITERAL: {
             struct piccolo_LiteralNode* literal = (struct piccolo_LiteralNode*)expr;
-            printf("LITERAL %.*s\n", (int)literal->token.length, literal->token.start);
+            printf("LITERAL %.*s -> %s\n", (int)literal->token.length, literal->token.start, typeBuf);
             break;
         }
         case PICCOLO_EXPR_VAR: {
             struct piccolo_VarNode* var = (struct piccolo_VarNode*)expr;
-            printf("VAR %.*s\n", (int)var->name.length, var->name.start);
+            printf("VAR %.*s -> %s\n", (int)var->name.length, var->name.start, typeBuf);
             break;
         }
         case PICCOLO_EXPR_RANGE: {
             struct piccolo_RangeNode* range = (struct piccolo_RangeNode*)expr;
-            printf("RANGE\n");
+            printf("RANGE -> %s\n", typeBuf);
             piccolo_printExpr(range->left, offset + 1);
             piccolo_printExpr(range->right, offset + 1);
             break;
         }
         case PICCOLO_EXPR_ARRAY_LITERAL: {
             struct piccolo_ArrayLiteralNode* arrayLiteral = (struct piccolo_ArrayLiteralNode*)expr;
-            printf("ARRAY LITERAL\n");
+            printf("ARRAY LITERAL -> %s\n", typeBuf);
             piccolo_printExpr(arrayLiteral->first, offset + 1);
             break;
         }
@@ -39,29 +43,29 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
             printf("HASHMAP ENTRY\n");
             for(int i = 0; i < offset + 2; i++)
                 printf("    ");
-            printf("KEY\n");
+            printf("KEY ->\n");
             piccolo_printExpr(entry->key, offset + 2);
             for(int i = 0; i < offset + 2; i++)
                 printf("    ");
-            printf("VALUE\n");
+            printf("VALUE ->\n");
             piccolo_printExpr(entry->value, offset + 2);
             break;
         }
         case PICCOLO_EXPR_HASHMAP_LITERAL: {
             struct piccolo_HashmapLiteralNode* hashmap = (struct piccolo_HashmapLiteralNode*)expr;
-            printf("HASHMAP\n");
-            piccolo_printExpr((struct piccolo_ExprNode*) hashmap->first, offset + 1);
+            printf("HASHMAP -> %s\n", typeBuf);
+            piccolo_printExpr((struct piccolo_ExprNode*)hashmap->first, offset + 1);
             break;
         }
         case PICCOLO_EXPR_SUBSCRIPT: {
             struct piccolo_SubscriptNode* subscript = (struct piccolo_SubscriptNode*)expr;
-            printf("SUBSCRIPT %.*s\n", (int)subscript->subscript.length, subscript->subscript.start);
+            printf("SUBSCRIPT %.*s -> %s\n", (int)subscript->subscript.length, subscript->subscript.start, typeBuf);
             piccolo_printExpr(subscript->value, offset + 1);
             break;
         }
         case PICCOLO_EXPR_INDEX: {
             struct piccolo_IndexNode* index = (struct piccolo_IndexNode*)expr;
-            printf("INDEX\n");
+            printf("INDEX -> %s\n", typeBuf);
             for(int i = 0; i < offset + 2; i++)
                 printf("    ");
             printf("VALUE\n");
@@ -74,20 +78,20 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
         }
         case PICCOLO_EXPR_UNARY: {
             struct piccolo_UnaryNode* unary = (struct piccolo_UnaryNode*)expr;
-            printf("UNARY %.*s\n", (int)unary->op.length, unary->op.start);
+            printf("UNARY %.*s -> %s\n", (int)unary->op.length, unary->op.start, typeBuf);
             piccolo_printExpr(unary->value, offset + 1);
             break;
         }
         case PICCOLO_EXPR_BINARY: {
             struct piccolo_BinaryNode* binary = (struct piccolo_BinaryNode*)expr;
-            printf("BINARY %.*s\n", (int)binary->op.length, binary->op.start);
+            printf("BINARY %.*s -> %s\n", (int)binary->op.length, binary->op.start, typeBuf);
             piccolo_printExpr(binary->a, offset + 1);
             piccolo_printExpr(binary->b, offset + 1);
             break;
         }
         case PICCOLO_EXPR_BLOCK: {
             struct piccolo_BlockNode* block = (struct piccolo_BlockNode*)expr;
-            printf("BLOCK\n");
+            printf("BLOCK -> %s\n", typeBuf);
             piccolo_printExpr(block->first, offset + 1);
             break;
         }
@@ -96,25 +100,25 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
             printf("FN_LITERAL ");
             for(int i = 0; i < fnLiteral->params.count; i++)
                 printf("%.*s ", (int)fnLiteral->params.values[i].length, fnLiteral->params.values[i].start);
-            printf("\n");
+            printf(" -> %s\n", typeBuf);
             piccolo_printExpr(fnLiteral->value, offset + 1);
             break;
         }
         case PICCOLO_EXPR_VAR_DECL: {
             struct piccolo_VarDeclNode* varDecl = (struct piccolo_VarDeclNode*)expr;
-            printf("VAR DECL %.*s\n", (int)varDecl->name.length, varDecl->name.start);
+            printf("VAR DECL %.*s -> %s\n", (int)varDecl->name.length, varDecl->name.start, typeBuf);
             piccolo_printExpr(varDecl->value, offset + 1);
             break;
         }
         case PICCOLO_EXPR_VAR_SET: {
             struct piccolo_VarSetNode* varSet = (struct piccolo_VarSetNode*)expr;
-            printf("VAR SET %.*s\n", (int)varSet->name.length, varSet->name.start);
+            printf("VAR SET %.*s -> %s\n", (int)varSet->name.length, varSet->name.start, typeBuf);
             piccolo_printExpr(varSet->value, offset + 1);
             break;
         }
         case PICCOLO_EXPR_SUBSCRIPT_SET: {
             struct piccolo_SubscriptSetNode* subscriptSet = (struct piccolo_SubscriptSetNode*)expr;
-            printf("SUBSCRIPT SET %.*s\n", (int)subscriptSet->subscript.length, subscriptSet->subscript.start);
+            printf("SUBSCRIPT SET %.*s -> %s\n", (int)subscriptSet->subscript.length, subscriptSet->subscript.start, typeBuf);
             for(int i = 0; i < offset + 2; i++)
                 printf("    ");
             printf("TARGET\n");
@@ -127,7 +131,7 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
         }
         case PICCOLO_EXPR_INDEX_SET: {
             struct piccolo_IndexSetNode* indexSet = (struct piccolo_IndexSetNode*)expr;
-            printf("INDEX SET\n");
+            printf("INDEX SET -> %s\n", typeBuf);
             for(int i = 0; i < offset + 2; i++)
                 printf("    ");
             printf("TARGET\n");
@@ -144,7 +148,7 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
         }
         case PICCOLO_EXPR_IF: {
             struct piccolo_IfNode* ifNode = (struct piccolo_IfNode*)expr;
-            printf("IF\n");
+            printf("IF -> %s\n", typeBuf);
             piccolo_printExpr(ifNode->condition, offset + 1);
             for(int i = 0; i <= offset + 1; i++)
                 printf("    ");
@@ -160,7 +164,7 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
         }
         case PICCOLO_EXPR_WHILE: {
             struct piccolo_WhileNode* whileNode = (struct piccolo_WhileNode*)expr;
-            printf("WHILE\n");
+            printf("WHILE -> %s\n", typeBuf);
             for(int i = 0; i <= offset + 1; i++)
                 printf("    ");
             printf("CONDITION\n");
@@ -173,7 +177,7 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
         }
         case PICCOLO_EXPR_FOR: {
             struct piccolo_ForNode* forNode = (struct piccolo_ForNode*)expr;
-            printf("FOR %.*s\n", (int)forNode->name.length, forNode->name.start);
+            printf("FOR %.*s -> %s\n", (int)forNode->name.length, forNode->name.start, typeBuf);
             for(int i = 0; i <= offset + 1; i++)
                 printf("    ");
             printf("IN\n");
@@ -186,7 +190,7 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
         }
         case PICCOLO_EXPR_CALL: {
             struct piccolo_CallNode* call = (struct piccolo_CallNode*)expr;
-            printf("CALL\n");
+            printf("CALL -> %s\n", typeBuf);
             for(int i = 0; i < offset + 2; i++)
                 printf("    ");
             printf("FUNC\n");
@@ -199,7 +203,7 @@ void piccolo_printExpr(struct piccolo_ExprNode* expr, int offset) {
         }
         case PICCOLO_EXPR_IMPORT: {
             struct piccolo_ImportNode* import = (struct piccolo_ImportNode*)expr;
-            printf("IMPORT %.*s\n", (int)import->packageName.length, import->packageName.start);
+            printf("IMPORT %.*s -> %s\n", (int)import->packageName.length, import->packageName.start, typeBuf);
             break;
         }
         default: {

@@ -6,12 +6,16 @@
 
 struct piccolo_Engine;
 
-//#define PICCOLO_ENABLE_MEMORY_TRACKER
+// #define PICCOLO_ENABLE_MEMORY_TRACKER
 
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
 
+#define PICCOLO_S(x) #x
+#define PICCOLO_S_(x) PICCOLO_S(x)
+#define PICCOLO_S__LINE__ PICCOLO_S_(__LINE__)
+
 #define PICCOLO_REALLOCATE(allocName, engine, data, oldSize, newSize) \
-        piccolo_reallocateTrack(__FILE__ ":" allocName, engine, data, oldSize, newSize)
+        piccolo_reallocateTrack(__FILE__ ":" PICCOLO_S__LINE__ ":" allocName, engine, data, oldSize, newSize)
 
 struct piccolo_MemoryTrack {
     void* ptr;
