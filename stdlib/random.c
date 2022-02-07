@@ -17,5 +17,6 @@ static piccolo_Value randomValNative(struct piccolo_Engine* engine, int argc, pi
 void piccolo_addRandomLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* random = piccolo_createPackage(engine);
     random->packageName = "random";
-    piccolo_defineGlobal(engine, random, "val", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, randomValNative)));
+    struct piccolo_Type* num = piccolo_simpleType(engine, PICCOLO_TYPE_NUM);
+    piccolo_defineGlobalWithType(engine, random, "val", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, randomValNative)), piccolo_makeFnType(engine, num, 0));
 }

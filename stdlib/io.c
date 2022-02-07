@@ -47,6 +47,7 @@ static piccolo_Value inputNative(struct piccolo_Engine* engine, int argc, struct
 void piccolo_addIOLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* io = piccolo_createPackage(engine);
     io->packageName = "io";
+    struct piccolo_Type* str = piccolo_simpleType(engine, PICCOLO_TYPE_STR);
     piccolo_defineGlobal(engine, io, "print", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, printNative)));
-    piccolo_defineGlobal(engine, io, "input", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, inputNative)));
+    piccolo_defineGlobalWithType(engine, io, "input", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, inputNative)), piccolo_makeFnType(engine, str, 0));
 }

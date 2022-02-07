@@ -24,5 +24,7 @@ static piccolo_Value shellNative(struct piccolo_Engine* engine, int argc, piccol
 void piccolo_addOSLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* os = piccolo_createPackage(engine);
     os->packageName = "os";
-    piccolo_defineGlobal(engine, os, "shell", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, shellNative)));
+    struct piccolo_Type* str = piccolo_simpleType(engine, PICCOLO_TYPE_STR);
+    struct piccolo_Type* nil = piccolo_simpleType(engine, PICCOLO_TYPE_NIL);
+    piccolo_defineGlobalWithType(engine, os, "shell", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, shellNative)), piccolo_makeFnType(engine, nil, 1, str));
 }

@@ -235,7 +235,8 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
 void piccolo_addFileLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* file = piccolo_createPackage(engine);
     file->packageName = "file";
-    piccolo_defineGlobal(engine, file, "read", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, readNative)));
-    piccolo_defineGlobal(engine, file, "write", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, writeNative)));
-    piccolo_defineGlobal(engine, file, "open", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, openNative)));
+    struct piccolo_Type* str = piccolo_simpleType(engine, PICCOLO_TYPE_STR);
+    piccolo_defineGlobalWithType(engine, file, "read", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, readNative)), piccolo_makeFnType(engine, str, 1, str));
+    piccolo_defineGlobalWithType(engine, file, "write", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, writeNative)), piccolo_makeFnType(engine, piccolo_simpleType(engine, PICCOLO_TYPE_NIL), 2, str, str));
+    piccolo_defineGlobalWithType(engine, file, "open", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, openNative)), piccolo_makeFnType(engine, piccolo_simpleType(engine, PICCOLO_TYPE_ANY), 2, str, str));
 }

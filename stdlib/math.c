@@ -138,13 +138,18 @@ static piccolo_Value sqrtNative(struct piccolo_Engine* engine, int argc, piccolo
 void piccolo_addMathLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* math = piccolo_createPackage(engine);
     math->packageName = "math";
-    piccolo_defineGlobal(engine, math, "min", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, minNative)));
-    piccolo_defineGlobal(engine, math, "max", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, maxNative)));
-    piccolo_defineGlobal(engine, math, "map", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, mapNative)));
-    piccolo_defineGlobal(engine, math, "pi", PICCOLO_NUM_VAL(3.14159265359));
-    piccolo_defineGlobal(engine, math, "sin", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sinNative)));
-    piccolo_defineGlobal(engine, math, "cos", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, cosNative)));
-    piccolo_defineGlobal(engine, math, "tan", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, tanNative)));
-    piccolo_defineGlobal(engine, math, "floor", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, floorNative)));
-    piccolo_defineGlobal(engine, math, "sqrt", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sqrtNative)));
+
+    struct piccolo_Type* num = piccolo_simpleType(engine, PICCOLO_TYPE_NUM);
+    struct piccolo_Type* numToNum = piccolo_makeFnType(engine, num, 1, num);
+    struct piccolo_Type* twoNumToNum = piccolo_makeFnType(engine, num, 2, num, num);
+
+    piccolo_defineGlobalWithType(engine, math, "min", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, minNative)), twoNumToNum);
+    piccolo_defineGlobalWithType(engine, math, "max", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, maxNative)), twoNumToNum);
+    piccolo_defineGlobalWithType(engine, math, "map", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, mapNative)), piccolo_makeFnType(engine, num, 5, num, num, num, num, num));
+    piccolo_defineGlobalWithType(engine, math, "pi", PICCOLO_NUM_VAL(3.14159265359), num);
+    piccolo_defineGlobalWithType(engine, math, "sin", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sinNative)), numToNum);
+    piccolo_defineGlobalWithType(engine, math, "cos", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, cosNative)), numToNum);
+    piccolo_defineGlobalWithType(engine, math, "tan", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, tanNative)), numToNum);
+    piccolo_defineGlobalWithType(engine, math, "floor", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, floorNative)), numToNum);
+    piccolo_defineGlobalWithType(engine, math, "sqrt", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sqrtNative)), numToNum);
 }

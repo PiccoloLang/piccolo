@@ -160,14 +160,17 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
 void piccolo_addDLLLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* dll = piccolo_createPackage(engine);
     dll->packageName = "dll";
-    piccolo_defineGlobal(engine, dll, "open", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, openNative)));
+    struct piccolo_Type* str = piccolo_simpleType(engine, PICCOLO_TYPE_STR);
+    struct piccolo_Type* any = piccolo_simpleType(engine, PICCOLO_TYPE_ANY);
+    piccolo_defineGlobalWithType(engine, dll, "open", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, openNative)), piccolo_makeFnType(engine, any, 1, str));
     #ifdef __APPLE__
-    piccolo_defineGlobal(engine, dll, "extension", PICCOLO_OBJ_VAL(piccolo_copyString(engine, "dylib", 5)));
+    const char* extension = "dylib";
     #endif
     #ifdef _WIN32
-    piccolo_defineGlobal(engine, dll, "extension", PICCOLO_OBJ_VAL(piccolo_copyString(engine, "dll", 3)));
+    const char* extension = "dll";
     #endif
     #ifdef __linux__
-    piccolo_defineGlobal(engine, dll, "extension", PICCOLO_OBJ_VAL(piccolo_copyString(engine, "so", 2)));
+    const char* extension = "so";
     #endif
+    piccolo_defineGlobalWithType(engine, dll, "extension", PICCOLO_OBJ_VAL(piccolo_copyString(engine, extension, strlen(extension))), piccolo_simpleType(engine, PICCOLO_TYPE_STR));
 }

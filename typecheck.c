@@ -57,7 +57,7 @@ void piccolo_getTypename(struct piccolo_Type* type, char* dest) {
                 piccolo_getTypename(type->subtypes.fn.params.values[i], buf);
                 dest += sprintf(dest, i == 0 ? "%s" : ", %s", buf);
             }
-            dest += sprintf(dest, " -> ");
+            dest += sprintf(dest, type->subtypes.fn.params.count == 0 ? "-> " : " -> ");
             char buf[256];
             piccolo_getTypename(type->subtypes.fn.result, buf);
             dest += sprintf(dest, "%s", buf);
@@ -174,8 +174,10 @@ static bool typeArrEq(struct piccolo_TypeArray* a, struct piccolo_TypeArray* b) 
 struct piccolo_Type* piccolo_fnType(struct piccolo_Engine* engine, struct piccolo_TypeArray* params, struct piccolo_Type* res) {
     struct piccolo_Type* curr = engine->types;
     while(curr != NULL) {
-        if(curr->type == PICCOLO_TYPE_FN && curr->subtypes.fn.result == res && typeArrEq(params, &curr->subtypes.fn.params))
+        if(curr->type == PICCOLO_TYPE_FN && curr->subtypes.fn.result == res && typeArrEq(params, &curr->subtypes.fn.params)) {
+            piccolo_freeTypeArray(engine, params);
             return curr;
+        }
         curr = curr->next;
     }
     struct piccolo_Type* fnType = allocType(engine, PICCOLO_TYPE_FN);
@@ -199,8 +201,10 @@ struct piccolo_Type* piccolo_pkgType(struct piccolo_Engine* engine, struct picco
 struct piccolo_Type* piccolo_unionType(struct piccolo_Engine* engine, struct piccolo_TypeArray* types) {
     struct piccolo_Type* curr = engine->types;
     while(curr != NULL) {
-        if(curr->type == PICCOLO_TYPE_UNION && typeArrEq(&curr->subtypes.unionTypes.types, types)) // TODO: dedupe permutations of types. Atm, num | str and str | num are considered different and memory is wasted
+        if(curr->type == PICCOLO_TYPE_UNION && typeArrEq(&curr->subtypes.unionTypes.types, types)) { // TODO: dedupe permutations of types. Atm, num | str and str | num are considered different and memory is wasted
+            piccolo_freeTypeArray(engine, types);
             return curr;
+        }
         curr = curr->next;
     }
     struct piccolo_Type* unionType = allocType(engine, PICCOLO_TYPE_UNION);

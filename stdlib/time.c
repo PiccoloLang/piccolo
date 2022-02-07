@@ -30,6 +30,8 @@ static piccolo_Value sleepNative(struct piccolo_Engine* engine, int argc, struct
 void piccolo_addTimeLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* time = piccolo_createPackage(engine);
     time->packageName = "time";
-    piccolo_defineGlobal(engine, time, "clock", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, clockNative)));
-    piccolo_defineGlobal(engine, time, "sleep", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sleepNative)));
+    struct piccolo_Type* num = piccolo_simpleType(engine, PICCOLO_TYPE_NUM);
+    struct piccolo_Type* nil = piccolo_simpleType(engine, PICCOLO_TYPE_NIL);
+    piccolo_defineGlobalWithType(engine, time, "clock", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, clockNative)), piccolo_makeFnType(engine, num, 0));
+    piccolo_defineGlobalWithType(engine, time, "sleep", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, sleepNative)), piccolo_makeFnType(engine, nil, 1, num));
 }

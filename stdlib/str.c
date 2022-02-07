@@ -57,6 +57,8 @@ static piccolo_Value numToStrNative(struct piccolo_Engine* engine, int argc, pic
 void piccolo_addStrLib(struct piccolo_Engine* engine) {
     struct piccolo_Package* str = piccolo_createPackage(engine);
     str->packageName = "str";
-    piccolo_defineGlobal(engine, str, "utfCode", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, getCodeNative)));
-    piccolo_defineGlobal(engine, str, "numToStr", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, numToStrNative)));
+    struct piccolo_Type* strType = piccolo_simpleType(engine, PICCOLO_TYPE_STR);
+    struct piccolo_Type* num = piccolo_simpleType(engine, PICCOLO_TYPE_NUM);
+    piccolo_defineGlobalWithType(engine, str, "utfCode", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, getCodeNative)), piccolo_makeFnType(engine, num, 1, strType));
+    piccolo_defineGlobalWithType(engine, str, "numToStr", PICCOLO_OBJ_VAL(piccolo_makeNative(engine, numToStrNative)), piccolo_makeFnType(engine, strType, 1, num));
 }
