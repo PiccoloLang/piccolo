@@ -36,6 +36,8 @@ struct piccolo_Engine {
 
     void (*printError)(const char* format, va_list);
 
+    struct piccolo_Package* (*findPackage)(struct piccolo_Engine*, struct piccolo_Compiler* compiler, const char* sourceFilepath, const char* name, size_t nameLen);
+
     struct piccolo_ObjUpval* openUpvals;
 
     struct piccolo_StringArray searchPaths;

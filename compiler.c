@@ -124,9 +124,21 @@ static struct piccolo_Variable createVar(struct piccolo_Token name, int slot) {
 }
 
 struct piccolo_Package* piccolo_resolvePackage(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* sourceFilepath, const char* name, size_t nameLen) {
+
     for(int i = 0; i < engine->packages.count; i++) {
         if(memcmp(engine->packages.values[i]->packageName, name, nameLen) == 0) {
             return engine->packages.values[i];
+        }
+    }
+
+    if(engine->findPackage != NULL) {
+        struct piccolo_Package *package = engine->findPackage(engine, compiler, sourceFilepath, name, nameLen);
+        if (package != NULL) {
+            char *heapPackageName = malloc(nameLen + 1);
+            memcpy(heapPackageName, name, nameLen);
+            heapPackageName[nameLen] = '\0';
+            package->packageName = heapPackageName;
+            return package;
         }
     }
 
@@ -148,11 +160,13 @@ struct piccolo_Package* piccolo_resolvePackage(struct piccolo_Engine* engine, st
                 }
             }
 
-            source = piccolo_readFile(path);
+            char* newSrc = piccolo_readFile(path);
+            if(newSrc != NULL)
+                source = piccolo_readFile(path);
         }
     }
     if(source == NULL) {
-        piccolo_enginePrintError(engine, "Failed to load package '%s'\n", name);
+        piccolo_enginePrintError(engine, "Failed to load package '%.*s'\n", nameLen, name);
         return NULL;
     }
 
@@ -166,6 +180,14 @@ struct piccolo_Package* piccolo_resolvePackage(struct piccolo_Engine* engine, st
     compiler->hadError |= !piccolo_compilePackage(engine, package);
 
     return package;
+}
+
+struct piccolo_Package* piccolo_resolveImport(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* sourceFilepath, struct piccolo_ImportNode* import) {
+    if(import->resolved)
+        return import->package;
+    import->resolved = true;
+    import->package = piccolo_resolvePackage(engine, compiler, sourceFilepath, import->packageName.start + 1, import->packageName.length - 2);
+    return import->package;
 }
 
 struct piccolo_VarData piccolo_getVariable(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Token name) {
@@ -962,9 +984,7 @@ static void compileCall(struct piccolo_CallNode* call, COMPILE_PARAMS) {
 }
 
 static void compileImport(struct piccolo_ImportNode* import, COMPILE_PARAMS) {
-    size_t packageLen = import->packageName.length - 2;
-    char* packageName = strndup(import->packageName.start + 1, packageLen);
-    struct piccolo_Package* package = piccolo_resolvePackage(engine, compiler, compiler->package->packageName, packageName, packageLen);
+    struct piccolo_Package* package = piccolo_resolveImport(engine, compiler, compiler->package->packageName, import);
     if(package == NULL) {
         piccolo_compilationError(engine, compiler, import->packageName.charIdx, "Package %.*s does not exist.", import->packageName.length, import->packageName.start);
     } else {
@@ -974,7 +994,6 @@ static void compileImport(struct piccolo_ImportNode* import, COMPILE_PARAMS) {
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_POP_STACK, import->packageName.charIdx);
     }
     import->package = package;
-    free(packageName);
 }
 
 static void compileExpr(struct piccolo_ExprNode* expr, COMPILE_PARAMS) {

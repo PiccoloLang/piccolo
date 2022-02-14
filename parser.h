@@ -178,6 +178,7 @@ struct piccolo_ImportNode {
     struct piccolo_ExprNode expr;
     struct piccolo_Token packageName;
     struct piccolo_Package* package;
+    bool resolved;
 };
 
 struct piccolo_Parser {

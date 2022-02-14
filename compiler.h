@@ -8,6 +8,7 @@
 #include "util/dynarray.h"
 #include "typecheck.h"
 #include "bytecode.h"
+#include "parser.h"
 
 // Maximum length of a package name
 #define PICCOLO_MAX_PACKAGE 4096
@@ -51,6 +52,7 @@ struct piccolo_Compiler {
 };
 
 struct piccolo_Package* piccolo_resolvePackage(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* sourceFilepath, const char* name, size_t nameLen);
+struct piccolo_Package* piccolo_resolveImport(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, const char* sourceFilepath, struct piccolo_ImportNode* import);
 
 void piccolo_compilationError(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, int charIdx, const char* format, ...);
 struct piccolo_VarData piccolo_getVariable(struct piccolo_Engine* engine, struct piccolo_Compiler* compiler, struct piccolo_Token name);

@@ -37,6 +37,7 @@ void piccolo_initEngine(struct piccolo_Engine* engine, void (*printError)(const 
     piccolo_initCallFrameArray(&engine->callFrames);
     piccolo_initStringArray(&engine->searchPaths);
     piccolo_initValueArray(&engine->locals);
+    engine->findPackage = NULL;
 #ifdef PICCOLO_ENABLE_MEMORY_TRACKER
     engine->track = NULL;
 #endif

@@ -317,6 +317,8 @@ static struct piccolo_Type* getSubscriptType(struct piccolo_Engine* engine, stru
         }
     } else if(isPkg(valType)) {
         struct piccolo_Package* pkg = valType->subtypes.pkg;
+        if(pkg == NULL)
+            return piccolo_simpleType(engine, PICCOLO_TYPE_ANY);
         struct piccolo_ObjString* indexStr = piccolo_copyString(engine, subscript->start, subscript->length);
         int globalIdx = piccolo_getGlobalTable(engine, &pkg->globalIdxs, indexStr);
         if(globalIdx != -1) {
@@ -684,6 +686,7 @@ static struct piccolo_Type* getType(struct piccolo_Engine* engine, struct piccol
             char fnBuf[256];
             piccolo_getTypename(fnType, fnBuf);
             char paramBuf[256];
+            paramBuf[0] = 0;
             char* paramDest = paramBuf;
             arg = call->firstArg;
             while(arg != NULL) {
@@ -697,14 +700,8 @@ static struct piccolo_Type* getType(struct piccolo_Engine* engine, struct piccol
         }
         case PICCOLO_EXPR_IMPORT: {
             struct piccolo_ImportNode* import = (struct piccolo_ImportNode*)expr;
-            if(import->package == NULL) {
-                size_t packageLen = import->packageName.length - 2;
-                char* packageName = strndup(import->packageName.start + 1, packageLen);
-                struct piccolo_Package* package = piccolo_resolvePackage(engine, compiler, compiler->package->packageName, packageName, packageLen);
-                import->package = package;
-                free(packageName);
-            }
-            return piccolo_pkgType(engine, import->package);
+            struct piccolo_Package* package = piccolo_resolveImport(engine, compiler, compiler->package->packageName, import);
+            return piccolo_pkgType(engine, package);
         }
     }
     return piccolo_simpleType(engine, PICCOLO_TYPE_ANY);

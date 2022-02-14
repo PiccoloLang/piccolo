@@ -332,6 +332,7 @@ static struct piccolo_ExprNode* parseImport(PARSER_PARAMS) {
             struct piccolo_ImportNode* import = ALLOCATE_NODE(parser, Import, PICCOLO_EXPR_IMPORT);
             import->packageName = packageName;
             import->package = NULL;
+            import->resolved = false;
             advanceParser(engine, parser);
             if(parser->currToken.type == PICCOLO_TOKEN_AS) {
                 advanceParser(engine, parser);
@@ -386,119 +387,126 @@ static struct piccolo_ExprNode* parseFnLiteral(PARSER_PARAMS) {
     return parseImport(PARSER_ARGS);
 }
 
-static struct piccolo_ExprNode* parseSubscript(PARSER_PARAMS) {
-    SKIP_NEWLINES()
-    struct piccolo_ExprNode* value = parseFnLiteral(PARSER_ARGS);
-    while(parser->currToken.type == PICCOLO_TOKEN_DOT || parser->currToken.type == PICCOLO_TOKEN_LEFT_SQR_PAREN) {
-        if(parser->currToken.type == PICCOLO_TOKEN_DOT) {
+static struct piccolo_ExprNode* parseSubscript(PARSER_PARAMS, struct piccolo_ExprNode* value) {
 
+    advanceParser(engine, parser);
+    if (parser->currToken.type == PICCOLO_TOKEN_IDENTIFIER) {
+        struct piccolo_Token subscript = parser->currToken;
+        advanceParser(engine, parser);
+        if (parser->currToken.type == PICCOLO_TOKEN_EQ) {
             advanceParser(engine, parser);
-            if (parser->currToken.type == PICCOLO_TOKEN_IDENTIFIER) {
-                struct piccolo_Token subscript = parser->currToken;
-                advanceParser(engine, parser);
-                if (parser->currToken.type == PICCOLO_TOKEN_EQ) {
-                    advanceParser(engine, parser);
-                    struct piccolo_SubscriptSetNode *subscriptSet = ALLOCATE_NODE(parser, SubscriptSet,
-                                                                                  PICCOLO_EXPR_SUBSCRIPT_SET);
-                    subscriptSet->target = value;
-                    subscriptSet->subscript = subscript;
-                    subscriptSet->value = parseExpr(PARSER_ARGS_REQ_VAL);
-                    return (struct piccolo_ExprNode *) subscriptSet;
-                } else {
-                    struct piccolo_SubscriptNode *subscriptNode = ALLOCATE_NODE(parser, Subscript,
-                                                                                PICCOLO_EXPR_SUBSCRIPT);
-                    subscriptNode->value = value;
-                    subscriptNode->subscript = subscript;
-                    value = (struct piccolo_ExprNode *) subscriptNode;
-                }
-            } else {
-                parsingError(engine, parser, "Expected name.");
-            }
-
+            struct piccolo_SubscriptSetNode *subscriptSet = ALLOCATE_NODE(parser, SubscriptSet,
+                                                                            PICCOLO_EXPR_SUBSCRIPT_SET);
+            subscriptSet->target = value;
+            subscriptSet->subscript = subscript;
+            subscriptSet->value = parseExpr(PARSER_ARGS_REQ_VAL);
+            return (struct piccolo_ExprNode *) subscriptSet;
         } else {
-
-            int charIdx = parser->currToken.charIdx;
-            advanceParser(engine, parser);
-            struct piccolo_ExprNode* index = parseExpr(PARSER_ARGS_REQ_VAL);
-
-            if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_SQR_PAREN) {
-                advanceParser(engine, parser);
-            } else {
-                parsingError(engine, parser, "Expected ].");
-            }
-
-            if(parser->currToken.type == PICCOLO_TOKEN_EQ) {
-
-                advanceParser(engine, parser);
-
-                struct piccolo_IndexSetNode* indexSet = ALLOCATE_NODE(parser, IndexSet, PICCOLO_EXPR_INDEX_SET);
-                indexSet->charIdx = charIdx;
-                indexSet->target = value;
-                indexSet->index = index;
-                indexSet->value = parseExpr(PARSER_ARGS_REQ_VAL);
-
-                return (struct piccolo_ExprNode*)indexSet;
-
-            } else {
-                struct piccolo_IndexNode* indexNote = ALLOCATE_NODE(parser, Index, PICCOLO_EXPR_INDEX);
-                indexNote->charIdx = charIdx;
-                indexNote->target = value;
-                indexNote->index = index;
-                value = (struct piccolo_ExprNode*)indexNote;
-            }
-
+            struct piccolo_SubscriptNode *subscriptNode = ALLOCATE_NODE(parser, Subscript,
+                                                                        PICCOLO_EXPR_SUBSCRIPT);
+            subscriptNode->value = value;
+            subscriptNode->subscript = subscript;
+            value = (struct piccolo_ExprNode *) subscriptNode;
         }
+    } else {
+        parsingError(engine, parser, "Expected name.");
+    }
+
+    return value;
+}
+
+static struct piccolo_ExprNode* parseIndex(PARSER_PARAMS, struct piccolo_ExprNode* value) {
+    int charIdx = parser->currToken.charIdx;
+    advanceParser(engine, parser);
+    struct piccolo_ExprNode* index = parseExpr(PARSER_ARGS_REQ_VAL);
+
+    if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_SQR_PAREN) {
+        advanceParser(engine, parser);
+    } else {
+        parsingError(engine, parser, "Expected ].");
+    }
+
+    if(parser->currToken.type == PICCOLO_TOKEN_EQ) {
+
+        advanceParser(engine, parser);
+
+        struct piccolo_IndexSetNode* indexSet = ALLOCATE_NODE(parser, IndexSet, PICCOLO_EXPR_INDEX_SET);
+        indexSet->charIdx = charIdx;
+        indexSet->target = value;
+        indexSet->index = index;
+        indexSet->value = parseExpr(PARSER_ARGS_REQ_VAL);
+
+        return (struct piccolo_ExprNode*)indexSet;
+
+    } else {
+        struct piccolo_IndexNode* indexNote = ALLOCATE_NODE(parser, Index, PICCOLO_EXPR_INDEX);
+        indexNote->charIdx = charIdx;
+        indexNote->target = value;
+        indexNote->index = index;
+        value = (struct piccolo_ExprNode*)indexNote;
     }
     return value;
 }
 
-static struct piccolo_ExprNode* parseCall(PARSER_PARAMS) {
-    SKIP_NEWLINES()
-    struct piccolo_ExprNode* function = parseSubscript(PARSER_ARGS);
-    while(parser->currToken.type == PICCOLO_TOKEN_LEFT_PAREN) {
-        int charIdx = parser->currToken.charIdx;
-        advanceParser(engine, parser);
-        struct piccolo_ExprNode* firstArg = NULL;
-        struct piccolo_ExprNode* curr = NULL;
-        while(parser->currToken.type != PICCOLO_TOKEN_RIGHT_PAREN) {
-            if(parser->currToken.type == PICCOLO_TOKEN_EOF) {
-                parsingError(engine, parser, "Expected ).");
-                return NULL;
-            }
-            struct piccolo_ExprNode* arg = parseExpr(PARSER_ARGS_REQ_VAL);
-            if(curr == NULL) {
-                firstArg = arg;
-                curr = arg;
-            } else {
-                curr->nextExpr = arg;
-                curr = arg;
-            }
+static struct piccolo_ExprNode* parseCall(PARSER_PARAMS, struct piccolo_ExprNode* function) {
 
-            while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
-                advanceParser(engine, parser);
-            
-            if(parser->currToken.type == PICCOLO_TOKEN_COMMA) {
-                advanceParser(engine, parser);
-                if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_PAREN) {
-                    parsingError(engine, parser, "Expected argument.");
-                    advanceParser(engine, parser);
-                    return function;
-                }
-            } else if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_PAREN) {
-
-            } else {
-                parsingError(engine, parser, "Expected comma.");
-                return NULL;
-            }
+    int charIdx = parser->currToken.charIdx;
+    advanceParser(engine, parser);
+    struct piccolo_ExprNode* firstArg = NULL;
+    struct piccolo_ExprNode* curr = NULL;
+    while(parser->currToken.type != PICCOLO_TOKEN_RIGHT_PAREN) {
+        if(parser->currToken.type == PICCOLO_TOKEN_EOF) {
+            parsingError(engine, parser, "Expected ).");
+            return NULL;
         }
-        advanceParser(engine, parser);
-        struct piccolo_CallNode* functionCall = ALLOCATE_NODE(parser, Call, PICCOLO_EXPR_CALL);
-        functionCall->function = function;
-        functionCall->firstArg = firstArg;
-        functionCall->charIdx = charIdx;
-        function = (struct piccolo_ExprNode*)functionCall;
+        struct piccolo_ExprNode* arg = parseExpr(PARSER_ARGS_REQ_VAL);
+        if(curr == NULL) {
+            firstArg = arg;
+            curr = arg;
+        } else {
+            curr->nextExpr = arg;
+            curr = arg;
+        }
+
+        while(parser->currToken.type == PICCOLO_TOKEN_NEWLINE)
+            advanceParser(engine, parser);
+        
+        if(parser->currToken.type == PICCOLO_TOKEN_COMMA) {
+            advanceParser(engine, parser);
+            if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_PAREN) {
+                parsingError(engine, parser, "Expected argument.");
+                advanceParser(engine, parser);
+                return function;
+            }
+        } else if(parser->currToken.type == PICCOLO_TOKEN_RIGHT_PAREN) {
+
+        } else {
+            parsingError(engine, parser, "Expected comma.");
+            return NULL;
+        }
     }
+    advanceParser(engine, parser);
+    struct piccolo_CallNode* functionCall = ALLOCATE_NODE(parser, Call, PICCOLO_EXPR_CALL);
+    functionCall->function = function;
+    functionCall->firstArg = firstArg;
+    functionCall->charIdx = charIdx;
+    function = (struct piccolo_ExprNode*)functionCall;
+    
     return function;
+}
+
+static struct piccolo_ExprNode* parsePostfix(PARSER_PARAMS) {
+    struct piccolo_ExprNode* result = parseFnLiteral(PARSER_ARGS);
+    while(parser->currToken.type == PICCOLO_TOKEN_DOT || parser->currToken.type == PICCOLO_TOKEN_LEFT_SQR_PAREN || parser->currToken.type == PICCOLO_TOKEN_LEFT_PAREN) {
+        if(parser->currToken.type == PICCOLO_TOKEN_DOT) {
+            result = parseSubscript(PARSER_ARGS, result);
+        } else if(parser->currToken.type == PICCOLO_TOKEN_LEFT_SQR_PAREN) {
+            result = parseIndex(PARSER_ARGS, result);
+        } else if(parser->currToken.type == PICCOLO_TOKEN_LEFT_PAREN) {
+            result = parseCall(PARSER_ARGS, result);
+        }
+    }
+    return result;
 }
 
 static struct piccolo_ExprNode* parseUnary(PARSER_PARAMS) {
@@ -513,7 +521,7 @@ static struct piccolo_ExprNode* parseUnary(PARSER_PARAMS) {
         unary->value = value;
         return (struct piccolo_ExprNode*)unary;
     }
-    return parseCall(PARSER_ARGS);
+    return parsePostfix(PARSER_ARGS);
 }
 
 static struct piccolo_ExprNode* parseRange(PARSER_PARAMS) {
