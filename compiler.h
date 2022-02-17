@@ -21,14 +21,14 @@ struct piccolo_Variable {
     const char* nameStart;
     size_t nameLen;
     bool Mutable;
-    struct piccolo_Type* type;
+    struct puccolo_ExprNode* decl;
 };
 
 struct piccolo_Upvalue {
     int slot;
     bool local;
     bool Mutable;
-    struct piccolo_Type* type;
+    struct piccolo_VarDeclNode* decl;
 };
 
 struct piccolo_VarData {
@@ -36,7 +36,7 @@ struct piccolo_VarData {
     enum piccolo_OpCode setOp;
     enum piccolo_OpCode getOp;
     bool mutable;
-    struct piccolo_Type* type;
+    struct piccolo_VarDeclNode* decl;
 };
 
 PICCOLO_DYNARRAY_HEADER(struct piccolo_Variable, Variable)

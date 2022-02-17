@@ -2,7 +2,10 @@
 #ifndef PICCOLO_TYPECHECK_H
 #define PICCOLO_TYPECHECK_H
 
+#include "scanner.h"
 #include "util/dynarray.h"
+
+PICCOLO_DYNARRAY_HEADER(struct piccolo_Token, Token)
 
 enum piccolo_TypeType {
     PICCOLO_TYPE_ANY,
@@ -30,6 +33,9 @@ struct piccolo_Type {
         struct {
             struct piccolo_Type* key;
             struct piccolo_Type* val;
+
+            struct piccolo_TokenArray strKeys;
+            struct piccolo_TypeArray strTypes;
         } hashmap;
         struct {
             struct piccolo_Type* result;
@@ -51,7 +57,7 @@ struct piccolo_ExprNode;
 
 struct piccolo_Type* piccolo_simpleType(struct piccolo_Engine* engine, enum piccolo_TypeType type);
 struct piccolo_Type* piccolo_arrayType(struct piccolo_Engine* engine, struct piccolo_Type* elemType);
-struct piccolo_Type* piccolo_hashmapType(struct piccolo_Engine* engine, struct piccolo_Type* keyType, struct piccolo_Type* valType);
+struct piccolo_Type* piccolo_hashmapType(struct piccolo_Engine* engine, struct piccolo_Type* keyType, struct piccolo_Type* valType, struct piccolo_TokenArray* strKeys, struct piccolo_TypeArray* strTypes);
 struct piccolo_Type* piccolo_fnType(struct piccolo_Engine* engine, struct piccolo_TypeArray* params, struct piccolo_Type* res);
 struct piccolo_Type* piccolo_pkgType(struct piccolo_Engine* engine, struct piccolo_Package* pkg);
 struct piccolo_Type* piccolo_unionType(struct piccolo_Engine* engine, struct piccolo_TypeArray* types);

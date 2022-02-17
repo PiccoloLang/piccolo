@@ -6,8 +6,6 @@
 #include "engine.h"
 #include "util/dynarray.h"
 
-PICCOLO_DYNARRAY_HEADER(struct piccolo_Token, Token)
-
 enum piccolo_ExprNodeType {
     PICCOLO_EXPR_LITERAL,
     PICCOLO_EXPR_ARRAY_LITERAL,
@@ -68,6 +66,7 @@ struct piccolo_HashmapLiteralNode {
 struct piccolo_VarNode {
     struct piccolo_ExprNode expr;
     struct piccolo_Token name;
+    struct piccolo_VarDeclNode* decl;
 };
 
 struct piccolo_RangeNode {
@@ -126,6 +125,7 @@ struct piccolo_VarSetNode {
     struct piccolo_ExprNode expr;
     struct piccolo_Token name;
     struct piccolo_ExprNode* value;
+    struct piccolo_VarDeclNode* decl;
 };
 
 struct piccolo_SubscriptSetNode {

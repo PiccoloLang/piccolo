@@ -48,7 +48,19 @@ void piccolo_getTypename(struct piccolo_Type* type, char* dest) {
             piccolo_getTypename(type->subtypes.hashmap.key, keyBuf);
             char valBuf[256];
             piccolo_getTypename(type->subtypes.hashmap.val, valBuf);
-            snprintf(dest, 256, "{%s : %s}", keyBuf, valBuf);
+            char strKeyBuf[256];
+            strKeyBuf[0] = '\0';
+            char* ptr = strKeyBuf;
+            size_t sizeLeft = 256;
+            for(int i = 0; i < type->subtypes.hashmap.strKeys.count; i++) {
+                char strValBuf[256];
+                piccolo_getTypename(type->subtypes.hashmap.strTypes.values[i], strValBuf);
+                struct piccolo_Token* strKey = &type->subtypes.hashmap.strKeys.values[i];
+                size_t taken = snprintf(ptr, sizeLeft, "'%.*s' : %s, ", strKey->length - 2, strKey->start + 1, strValBuf);
+                ptr += taken;
+                sizeLeft -= taken;
+            }
+            snprintf(dest, 256, "{%s%s : %s}", strKeyBuf, keyBuf, valBuf);
             break;
         }
         case PICCOLO_TYPE_FN: {
@@ -93,9 +105,41 @@ void piccolo_getTypename(struct piccolo_Type* type, char* dest) {
     dest[255] = '\0';
 }
 
+static uint64_t typeToNum(struct piccolo_Type* type) { // TODO: make this more intelligent lol
+    union {
+        struct piccolo_Type* type;
+        uint64_t ptr;
+    } x;
+    x.type = type;
+    return x.ptr;
+}
+
+static void sortTypeArray(struct piccolo_TypeArray* types, int start, int size) { // TODO: perhaps make this part of the dynarr macro madness?
+    if(size == 1 || size == 0)
+        return;
+    sortTypeArray(types, start, size / 2);
+    sortTypeArray(types, start + size / 2, size - size / 2);
+    struct picolo_Type* temp[size];
+    int a = 0, b = 0;
+    for(int i = 0; i < size; i++) {
+        if(b == size - size / 2 || typeToNum(types->values[start + a]) < typeToNum(types->values[start + size / 2 + b])) {
+            temp[i] = types->values[start + a];
+            a++;
+        } else {
+            temp[i] = types->values[start + size / 2 + b];
+            b++;
+        }
+    }
+    memcpy(&types->values[start], temp, size * sizeof(struct piccolo_Type*));
+}
+
 void piccolo_freeType(struct piccolo_Engine* engine, struct piccolo_Type* type) {
     if(type->type == PICCOLO_TYPE_FN) {
         piccolo_freeTypeArray(engine, &type->subtypes.fn.params);
+    }
+    if(type->type == PICCOLO_TYPE_HASHMAP) {
+        piccolo_freeTokenArray(engine, &type->subtypes.hashmap.strKeys);
+        piccolo_freeTypeArray(engine, &type->subtypes.hashmap.strTypes);
     }
     if(type->type == PICCOLO_TYPE_UNION) {
         piccolo_freeTypeArray(engine, &type->subtypes.unionTypes.types);
@@ -164,16 +208,40 @@ struct piccolo_Type* piccolo_arrayType(struct piccolo_Engine* engine, struct pic
     return result;
 }
 
-struct piccolo_Type* piccolo_hashmapType(struct piccolo_Engine* engine, struct piccolo_Type* keyType, struct piccolo_Type* valType) {
+struct piccolo_Type* piccolo_hashmapType(struct piccolo_Engine* engine, struct piccolo_Type* keyType, struct piccolo_Type* valType, struct piccolo_TokenArray* strKeys, struct piccolo_TypeArray* strTypes) {
     struct piccolo_Type* curr = engine->types;
     while(curr != NULL) {
-        if(curr->type == PICCOLO_TYPE_HASHMAP && curr->subtypes.hashmap.key == keyType && curr->subtypes.hashmap.val == valType)
-            return curr;
+        if(curr->type == PICCOLO_TYPE_HASHMAP) {
+            bool allStrKeysMatch = true;
+            for(int i = 0; i < strKeys->count; i++) {
+                bool found = false;
+                for(int j = 0; j < curr->subtypes.hashmap.strKeys.count; j++) {
+                    struct piccolo_Token* otherToken = &curr->subtypes.hashmap.strKeys.values[j];
+                    if(strKeys->values[i].length == otherToken->length &&
+                        memcmp(strKeys->values[i].start, otherToken->start, strKeys->values[i].length) == 0) {
+                        if(strTypes->values[i] == curr->subtypes.hashmap.strTypes.values[j]) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if(!found)
+                    allStrKeysMatch = false;
+            }
+            if(curr->subtypes.hashmap.key == keyType &&
+                curr->subtypes.hashmap.val == valType && allStrKeysMatch) {
+                piccolo_freeTokenArray(engine, strKeys);
+                piccolo_freeTypeArray(engine, strTypes);
+                return curr;
+            }
+        }
         curr = curr->next;
     }
     struct piccolo_Type* result = allocType(engine, PICCOLO_TYPE_HASHMAP);
     result->subtypes.hashmap.key = keyType;
     result->subtypes.hashmap.val = valType;
+    result->subtypes.hashmap.strKeys = *strKeys;
+    result->subtypes.hashmap.strTypes = *strTypes;
     return result;
 }
 
@@ -214,6 +282,7 @@ struct piccolo_Type* piccolo_pkgType(struct piccolo_Engine* engine, struct picco
 }
 
 struct piccolo_Type* piccolo_unionType(struct piccolo_Engine* engine, struct piccolo_TypeArray* types) {
+    sortTypeArray(types, 0, types->count);
     struct piccolo_Type* curr = engine->types;
     while(curr != NULL) {
         if(curr->type == PICCOLO_TYPE_UNION && typeArrEq(&curr->subtypes.unionTypes.types, types)) { // TODO: dedupe permutations of types. Atm, num | str and str | num are considered different and memory is wasted
@@ -251,6 +320,35 @@ static bool isSubtype(struct piccolo_Type* super, struct piccolo_Type* sub) {
                 if(isSubtype(super->subtypes.unionTypes.types.values[i], sub))
                     return true;
             }
+        }
+    }
+    if(super->type == PICCOLO_TYPE_ARRAY) {
+        if(sub->type == PICCOLO_TYPE_ARRAY) {
+            return isSubtype(super->subtypes.listElem, sub->subtypes.listElem);
+        }
+    }
+    if(super->type == PICCOLO_TYPE_HASHMAP) {
+        if(sub->type == PICCOLO_TYPE_HASHMAP) {
+            if(!isSubtype(super->subtypes.hashmap.key, sub->subtypes.hashmap.key))
+                return false;
+            if(!isSubtype(super->subtypes.hashmap.val, sub->subtypes.hashmap.val))
+                return false;
+            for(int i = 0; i < sub->subtypes.hashmap.strKeys.count; i++) {
+                bool found = false;
+                for(int j = 0; j < super->subtypes.hashmap.strKeys.count; j++) {
+                    struct piccolo_Token* a = &sub->subtypes.hashmap.strKeys.values[i];
+                    struct piccolo_Token* b = &super->subtypes.hashmap.strKeys.values[j];
+                    if(a->length == b->length && memcmp(a->start, b->start, a->length) == 0) {
+                        if(isSubtype(super->subtypes.hashmap.strTypes.values[j], sub->subtypes.hashmap.strTypes.values[i])) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if(!found)
+                    return false;
+            }
+            return true;
         }
     }
     return false;
@@ -311,6 +409,13 @@ static struct piccolo_Type* getSubscriptType(struct piccolo_Engine* engine, stru
             return piccolo_simpleType(engine, PICCOLO_TYPE_NUM);
         }
     } else if(isHashmap(valType)) {
+        for(int i = 0; i < valType->subtypes.hashmap.strKeys.count; i++) {
+            struct piccolo_Token* key = &valType->subtypes.hashmap.strKeys.values[i];
+            if(key->length - 2 == subscript->length && memcmp(key->start + 1, subscript->start, subscript->length) == 0) {
+                return valType->subtypes.hashmap.strTypes.values[i];
+            }
+        }
+
         struct piccolo_Type* keyType = valType->subtypes.hashmap.key;
         if(isStr(keyType)) {
             return valType->subtypes.hashmap.val;
@@ -395,23 +500,43 @@ static struct piccolo_Type* getType(struct piccolo_Engine* engine, struct piccol
         case PICCOLO_EXPR_HASHMAP_LITERAL: {
             struct piccolo_HashmapLiteralNode* hashmapLiteral = (struct piccolo_HashmapLiteralNode*)expr;
             struct piccolo_HashmapEntryNode* currEntry = hashmapLiteral->first;
+
             struct piccolo_Type* keyType = NULL;
             struct piccolo_Type* valType = NULL;
+
+            struct piccolo_TokenArray strKeys;
+            struct piccolo_TypeArray strTypes;
+            piccolo_initTokenArray(&strKeys);
+            piccolo_initTypeArray(&strTypes);
+            
             while(currEntry != NULL) {
-                keyType = mergeTypes(engine, keyType, piccolo_getType(engine, compiler, currEntry->key));
-                valType = mergeTypes(engine, valType, piccolo_getType(engine, compiler, currEntry->value));
+                struct piccolo_ExprNode* keyExpr = currEntry->key;
+                struct piccolo_Type* currValType = piccolo_getType(engine, compiler, currEntry->value);
+                
+                if(keyExpr->type == PICCOLO_EXPR_LITERAL) {
+                    struct piccolo_LiteralNode* keyLiteral = keyExpr;
+                    if(keyLiteral->token.type == PICCOLO_TOKEN_STRING) {
+                        piccolo_writeTokenArray(engine, &strKeys, keyLiteral->token);
+                        piccolo_writeTypeArray(engine, &strTypes, currValType);
+                    }
+                }
+                keyType = mergeTypes(engine, keyType, piccolo_getType(engine, compiler, keyExpr));
+                valType = mergeTypes(engine, valType, currValType);
                 currEntry = currEntry->expr.nextExpr;
             }
             if(keyType == NULL)
                 keyType = piccolo_simpleType(engine, PICCOLO_TYPE_ANY);
             if(valType == NULL)
                 valType = piccolo_simpleType(engine, PICCOLO_TYPE_ANY);
-            return piccolo_hashmapType(engine, keyType, valType);
+
+            struct piccolo_Type* result = piccolo_hashmapType(engine, keyType, valType, &strKeys, &strTypes);
+            return result;
         }
         case PICCOLO_EXPR_VAR: {
             struct piccolo_VarNode* var = (struct piccolo_VarNode*)expr;
-            struct piccolo_VarData varData = piccolo_getVariable(engine, compiler, var->name);
-            return varData.type == NULL ? piccolo_simpleType(engine, PICCOLO_TYPE_ANY) : varData.type;
+            if(var->decl == NULL)
+                return piccolo_simpleType(engine, PICCOLO_TYPE_ANY);
+            return var->decl->typed ? piccolo_getType(engine, compiler, var->decl->value) : piccolo_simpleType(engine, PICCOLO_TYPE_ANY);
         }
         case PICCOLO_EXPR_RANGE: {
             struct piccolo_RangeNode* range = (struct piccolo_RangeNode*)expr;
@@ -578,16 +703,16 @@ static struct piccolo_Type* getType(struct piccolo_Engine* engine, struct piccol
         }
         case PICCOLO_EXPR_VAR_SET: {
             struct piccolo_VarSetNode* varSet = (struct piccolo_VarSetNode*)expr;
-            struct piccolo_VarData varData = piccolo_getVariable(engine, compiler, varSet->name);
             struct piccolo_Type* valType = piccolo_getType(engine, compiler, varSet->value);
-            if(varData.type != NULL) {
-                if(!isSubtype(varData.type, valType)) {
-                    char varTypeBuf[256];
-                    piccolo_getTypename(varData.type, varTypeBuf);
-                    char valTypeBuf[256];
-                    piccolo_getTypename(valType, valTypeBuf);
-                    piccolo_compilationError(engine, compiler, varSet->name.charIdx, "Cannot assign %s to variable of type %s.", valTypeBuf, varTypeBuf);
-                }
+            if(varSet->decl == NULL || !varSet->decl->typed)    
+                return piccolo_simpleType(engine, PICCOLO_TYPE_ANY);
+            struct piccolo_Type* targetType = piccolo_getType(engine, compiler, varSet->decl->value);
+            if(!isSubtype(targetType, valType)) {
+                char varTypeBuf[256];
+                piccolo_getTypename(targetType, varTypeBuf);
+                char valTypeBuf[256];
+                piccolo_getTypename(valType, valTypeBuf);
+                piccolo_compilationError(engine, compiler, varSet->name.charIdx, "Cannot assign %s to variable of type %s.", valTypeBuf, varTypeBuf);
             }
             return valType;
         }
