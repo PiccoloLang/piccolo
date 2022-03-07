@@ -121,16 +121,16 @@ static piccolo_Value openNative(struct piccolo_Engine* engine, int argc, piccolo
 
 #ifdef _WIN32
     dll->library = LoadLibrary(path);
-    if(dll->handle == NULL) {
+    if(dll->library == NULL) {
         size_t pathLen = strlen(path);
         char buf[4096];
         for(int i = 0; i < engine->searchPaths.count; i++) {
             piccolo_applyRelativePathToFilePath(buf, path, pathLen, engine->searchPaths.values[i]);
-            dll->handle = LoadLibrary(buf);
-            if(dll->handle != NULL)
+            dll->library = LoadLibrary(buf);
+            if(dll->library != NULL)
                 break;
         }
-        if(dll->handle == NULL) {
+        if(dll->library == NULL) {
             piccolo_runtimeError(engine, "Could not open DLL.");
             return PICCOLO_NIL_VAL();
         }

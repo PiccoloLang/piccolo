@@ -203,7 +203,7 @@ static piccolo_Value indexing(struct piccolo_Engine* engine, struct piccolo_Obj*
             if(nativeStruct->index != NULL) {
                 return nativeStruct->index(PICCOLO_GET_PAYLOAD(nativeStruct, void), engine, idx, set, value);
             } else {
-                piccolo_runtimeError(engine, "Cannot index %s", nativeStruct->typename);
+                piccolo_runtimeError(engine, "Cannot index %s", nativeStruct->Typename);
             }
             break;
         }

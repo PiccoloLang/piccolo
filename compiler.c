@@ -205,7 +205,7 @@ struct piccolo_VarData piccolo_getVariable(struct piccolo_Engine* engine, struct
                 result.slot = upvalueSlot;
                 result.setOp = PICCOLO_OP_SET_UPVAL;
                 result.getOp = PICCOLO_OP_GET_UPVAL;
-                result.mutable = compiler->upvals.values[upvalueSlot].Mutable;
+                result.Mutable = compiler->upvals.values[upvalueSlot].Mutable;
                 result.decl = compiler->upvals.values[upvalueSlot].decl;
                 result.decl = NULL;
             }
@@ -213,14 +213,14 @@ struct piccolo_VarData piccolo_getVariable(struct piccolo_Engine* engine, struct
             result.slot = localSlot;
             result.getOp = PICCOLO_OP_GET_LOCAL;
             result.setOp = PICCOLO_OP_SET_LOCAL;
-            result.mutable = compiler->locals.values[localSlot].Mutable;
+            result.Mutable = compiler->locals.values[localSlot].Mutable;
             result.decl = compiler->locals.values[localSlot].decl;
         }
     } else {
         result.slot = globalSlot;
         result.getOp = PICCOLO_OP_GET_GLOBAL;
         result.setOp = PICCOLO_OP_SET_GLOBAL;
-        result.mutable = compiler->globals->values[globalSlot].Mutable;
+        result.Mutable = compiler->globals->values[globalSlot].Mutable;
         result.decl = compiler->globals->values[globalSlot].decl;
     }
 
@@ -442,7 +442,7 @@ static void findGlobals(struct piccolo_Engine* engine, struct piccolo_Compiler* 
                     piccolo_compilationError(engine, compiler, varDecl->name.charIdx, "Variable '%.*s' already defined.", varDecl->name.length, varDecl->name.start);
                 } else {
                     struct piccolo_Variable var = createVar(varDecl->name, compiler->globals->count);
-                    var.Mutable = varDecl->mutable;
+                    var.Mutable = varDecl->Mutable;
                     var.decl = varDecl;
                     piccolo_writeVariableArray(engine, compiler->globals, var);
                 }
@@ -761,7 +761,7 @@ static void compileVarDecl(struct piccolo_VarDeclNode* varDecl, COMPILE_PARAMS) 
         } else {
             int slot = compiler->locals.count;
             struct piccolo_Variable var = createVar(varDecl->name, slot);
-            var.Mutable = varDecl->mutable;
+            var.Mutable = varDecl->Mutable;
             var.decl = varDecl;
             piccolo_writeVariableArray(engine, &compiler->locals, var);
             piccolo_writeBytecode(engine, bytecode, PICCOLO_OP_PUSH_LOCAL, 0);
@@ -781,7 +781,7 @@ static void compileVarSet(struct piccolo_VarSetNode* varSet, COMPILE_PARAMS) {
         piccolo_compilationError(engine, compiler, varSet->name.charIdx, "Variable '%.*s' is not defined.", varSet->name.length, varSet->name.start);
     } else {
         varSet->decl = varData.decl;
-        if(!varData.mutable) {
+        if(!varData.Mutable) {
             piccolo_compilationError(engine, compiler, varSet->name.charIdx, "Cannot modify immutable variable.");
             return;
         }
