@@ -87,7 +87,7 @@ struct piccolo_ObjNativeStruct {
     void (*free)(void* payload);
     void (*gcMark)(void* payload);
     piccolo_Value (*index)(void* payload, struct piccolo_Engine* engine, piccolo_Value key, bool set, piccolo_Value value);
-    const char* typename;
+    const char* Typename;
     size_t payloadSize;
 };
 

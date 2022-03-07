@@ -118,7 +118,7 @@ struct piccolo_VarDeclNode {
     struct piccolo_Token name;
     struct piccolo_ExprNode* value;
     bool typed;
-    bool mutable;
+    bool Mutable;
 };
 
 struct piccolo_VarSetNode {

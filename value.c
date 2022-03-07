@@ -65,7 +65,7 @@ static void printObject(struct piccolo_Obj* obj) {
     }
     if(obj->type == PICCOLO_OBJ_NATIVE_STRUCT) {
         struct piccolo_ObjNativeStruct* nativeStruct = (struct piccolo_ObjNativeStruct*)obj;
-        printf("<%s>", nativeStruct->typename);
+        printf("<%s>", nativeStruct->Typename);
     }
     obj->printed = false;
 }

@@ -344,7 +344,7 @@ static struct piccolo_ExprNode* parseImport(PARSER_PARAMS) {
                 }
                 advanceParser(engine, parser);
                 importAs->value = (struct piccolo_ExprNode*)import;
-                importAs->mutable = false;
+                importAs->Mutable = false;
                 return (struct piccolo_ExprNode*)importAs;
             }
             return (struct piccolo_ExprNode*)import;
@@ -648,7 +648,7 @@ static struct piccolo_ExprNode* parseVarDecl(PARSER_PARAMS) {
     SKIP_NEWLINES()
     if(parser->currToken.type == PICCOLO_TOKEN_VAR || parser->currToken.type == PICCOLO_TOKEN_CONST) {
         struct piccolo_VarDeclNode* varDecl = ALLOCATE_NODE(parser, VarDecl, PICCOLO_EXPR_VAR_DECL);
-        varDecl->mutable = parser->currToken.type == PICCOLO_TOKEN_VAR;
+        varDecl->Mutable = parser->currToken.type == PICCOLO_TOKEN_VAR;
         advanceParser(engine, parser);
         if(parser->currToken.type == PICCOLO_TOKEN_IDENTIFIER) {
             varDecl->name = parser->currToken;

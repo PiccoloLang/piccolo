@@ -35,7 +35,7 @@ struct piccolo_VarData {
     int slot;
     enum piccolo_OpCode setOp;
     enum piccolo_OpCode getOp;
-    bool mutable;
+    bool Mutable;
     struct piccolo_VarDeclNode* decl;
 };
 

@@ -59,13 +59,13 @@ struct piccolo_Obj* allocateObj(struct piccolo_Engine* engine, enum piccolo_ObjT
     return obj;
 }
 
-struct piccolo_ObjNativeStruct* piccolo_allocNativeStruct(struct piccolo_Engine* engine, size_t size, const char* typename) {
+struct piccolo_ObjNativeStruct* piccolo_allocNativeStruct(struct piccolo_Engine* engine, size_t size, const char* Typename) {
     struct piccolo_ObjNativeStruct* nativeStruct = (struct piccolo_ObjNativeStruct*)allocateObj(engine, PICCOLO_OBJ_NATIVE_STRUCT, sizeof(struct piccolo_ObjNativeStruct) + size);
     nativeStruct->payloadSize = size;
     nativeStruct->free = NULL;
     nativeStruct->gcMark = NULL;
     nativeStruct->index = NULL;
-    nativeStruct->typename = typename;
+    nativeStruct->Typename = Typename;
     return nativeStruct;
 }
 
